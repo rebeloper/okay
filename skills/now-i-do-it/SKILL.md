@@ -39,9 +39,9 @@ every step, every option, and every line.
 2. The skill DOES write two non-source things: the answer-key patch
    file under `.okay/`, and one `.okay/` line in `.gitignore` if it is
    missing. The skill DOES run tree-changing git commands:
-   `git add -A`, `git reset`, `git checkout --`, and `rm` of captured
-   new files. These are reference and reset actions. They are never
-   code authoring.
+   `git add -N` and path-scoped `git add`, `git diff`, `git reset`,
+   plus `git checkout --` and `rm` of captured new files. These are
+   reference and reset actions. They are never code authoring.
 3. Every destructive change to the working tree needs the developer's
    explicit nod first. This covers the Step 2 revert and each new-file
    delete.
@@ -74,27 +74,32 @@ phase, a gate, or a check.
 4. Confirm the working tree is dirty. Run `git status --porcelain`. If
    it shows no change and no untracked file, stop. Tell the developer:
    "Write the code first. Then run me."
-5. Build the answer-key candidate:
-   - `git add -A` to stage every change, tracked and new.
-   - `git diff --staged` to get the full patch text.
-   - `git reset` to unstage. The tree keeps the developer's work for
-     now.
-   - `git ls-files --others --exclude-standard` before the `add`, or
-     read the staged status, to record which files are new.
+5. Record which files the change touches. Run `git status --porcelain`.
+   List the new (untracked) files separately with
+   `git ls-files --others --exclude-standard`.
 6. Print the captured file list. Show line counts. Ask with
    `AskUserQuestion`:
    - Capture **all** of these files (Recommended).
    - Capture a **subset** — the developer names the files. Only the
      named files go into the answer-key and only they are reverted in
      Step 2.
-7. If the diff is large (many files, or hundreds of lines), warn the
+   The files chosen here are *the captured paths*. Every later git
+   command in this skill is scoped to them.
+7. Build the answer-key patch, scoped to the captured paths:
+   `git add -A -- <captured paths>`, then
+   `git diff --staged -- <captured paths>` for the patch text, then
+   `git reset -- <captured paths>` to unstage. The tree keeps the
+   developer's work for now.
+8. If the diff is large (many files, or hundreds of lines), warn the
    developer. The skill works best on one focused change. Offer to
    narrow to a subset.
 
 ## Step 2 — Save the answer-key, then revert
 
 1. Write the patch to `.okay/answer-key-<timestamp>.patch` at the
-   repository root. `<timestamp>` is `YYYYMMDD-HHMMSS`.
+   repository root. `<timestamp>` is `YYYYMMDD-HHMMSS`. The patch text
+   is the scoped `git diff --staged -- <captured paths>` output from
+   Step 1.
 2. If `.gitignore` at the repository root does not already ignore
    `.okay/`, append a `.okay/` line to it.
 3. Record in working notes: the absolute patch path, the `HEAD` sha
@@ -107,7 +112,10 @@ phase, a gate, or a check.
    - New captured files: `rm <path>` for each, after confirming each
      path with the developer.
    - Never run a blanket `git clean`.
-7. Verify. Run `git status --porcelain` for the captured paths. It must
+7. To restore your work at any time, run
+   `git apply .okay/answer-key-<timestamp>.patch` from the repository
+   root.
+8. Verify. Run `git status --porcelain` for the captured paths. It must
    show nothing. If a captured path still shows a change, stop and tell
    the developer.
 
@@ -242,9 +250,13 @@ For the current chunk:
    developer to type those exact lines into the file by hand. Tell the
    developer to save the file. The skill does not write the lines.
 8. When the developer says the chunk is typed, check the change on disk.
-   Run `git diff HEAD`. Add `git diff --staged` if the developer staged
-   the work. Check this chunk's lines against the answer-key. The lines
-   must be present. The lines must match.
+   Run `git add -N -- <captured paths>` first so new files show. Then
+   run `git diff HEAD -- <captured paths>`. Add
+   `git diff --staged -- <captured paths>` if the developer staged the
+   work. `git add -N` leaves the files unstaged. It does not disturb
+   staging state and needs no `git reset`. Check this chunk's lines
+   against the answer-key. The lines must be present. The lines must
+   match.
    - Never read a chat paste. If the developer pastes code, reply with
      this exact sentence:
      `Save it to the file. I review the change on disk.`
@@ -264,8 +276,10 @@ For the current chunk:
 
 ## Step 10 — Verify the rebuild
 
-1. Stage and diff: `git add -A` then `git diff --staged`. Then
-   `git reset`.
+1. Stage and diff, scoped to the captured paths:
+   `git add -A -- <captured paths>` then
+   `git diff --staged -- <captured paths>`. Then
+   `git reset -- <captured paths>`.
 2. Compare that patch to the saved answer-key patch. They must
    describe the same change. Ignore ordering noise and context-line
    differences; the added and removed lines must match.
