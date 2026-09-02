@@ -59,9 +59,3 @@ Then restart Claude Code.
 ## Output style
 
 Every skill writes ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each skill folder carries its own `reference-asd-ste100.md` copy, so each skill stays self-contained.
-
-## Strict mode
-
-`okay` ships no lock. It advises. It does not stop a write.
-
-To make Claude Code unable to write files at all in a project, use the separate `strict-mode` tool. `okay` leaves that choice to the developer.
