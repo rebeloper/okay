@@ -2,6 +2,7 @@
 name: explain
 description: Explains any concept at a chosen depth. Takes a level argument — five (a five-year-old), junior (a junior dev/intern, the default), non-dev (a smart non-engineer), or teammate (an experienced dev new to this codebase). Default is junior. Use when the user wants something explained, says "explain like I'm five/a junior/a non-dev", "/okay:explain", or "ELI5".
 argument-hint: "[five | junior (default) | non-dev | teammate] <topic>"
+disable-model-invocation: true
 ---
 
 Explain the topic at hand at the requested level. The argument picks the listener; default to `junior` if no level is given. Each level changes WHO you're talking to — match their vocabulary, what they already know, and what they need.

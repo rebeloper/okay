@@ -11,6 +11,7 @@ description: >
   this myself", or "make me type this again". Do NOT use when the user
   wants the code written for them, or has no uncommitted change.
 argument-hint: "[junior (default) | teammate]"
+disable-model-invocation: true
 ---
 
 # now-i-do-it
