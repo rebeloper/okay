@@ -4,7 +4,7 @@ Every message a dev skill sends the developer follows these rules.
 This covers explanations, `AskUserQuestion` questions, option labels and
 descriptions, hints, and recap lines.
 
-Where a skill defines a level voice (for example `dev-explain`'s
+Where a skill defines a level voice (for example `okay:explain`'s
 `five` or `teammate`), that voice sets vocabulary depth, analogy use,
 and whether to show code. These sentence and word rules still apply on
 top of it.
