@@ -41,6 +41,9 @@ The status bar shows `💎` while `less-code` is on and `📈<tokens>` while
 
 ```
 /plugin marketplace add rebeloper/okay
+```
+
+```
 /plugin install okay@okay
 ```
 
@@ -65,16 +68,26 @@ Restart Claude Code after any update or removal.
 **Removing `okay` cleanly.** The status-bar uninstaller lives inside the
 plugin, so run it *before* the plugin directory is deleted:
 
+1. While the plugin is still installed — removes okay's status bar and
+   restores any `statusline.sh` that was there before:
+
 ```
-# 1. while the plugin is still installed — removes okay's status bar and
-#    restores any statusline.sh that was there before
 bash <plugin-root>/scripts/statusline-install.sh uninstall
+```
 
-# 2. then drop the plugin and the marketplace entry
+2. Then drop the plugin and the marketplace entry:
+
+```
 /plugin uninstall okay@okay
-/plugin marketplace remove okay
+```
 
-# 3. then delete okay's own state (toggle values, sandbox savings)
+```
+/plugin marketplace remove okay
+```
+
+3. Then delete okay's own state (toggle values, sandbox savings):
+
+```
 rm -rf ~/.okay/
 ```
 
@@ -111,9 +124,16 @@ not want it.
 
 ## Development
 
+`node --test` — sandbox runner and PreToolUse gate:
+
 ```
-npm test          # node --test — sandbox runner and PreToolUse gate
-npm run test:bats # bats — SessionStart hook, PreToolUse shim, status bar
+npm test
+```
+
+`bats` — SessionStart hook, PreToolUse shim, status bar:
+
+```
+npm run test:bats
 ```
 
 Both suites run on every push and pull request (`.github/workflows/test.yml`).
