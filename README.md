@@ -22,7 +22,9 @@ Use `okay:wait-what` at any point. Run it when a message does not land. It makes
 
 ## Two always-on modes
 
-`okay` ships two modes **on** from the first session after install:
+`okay` ships two modes **on**. A `SessionStart` hook arms them, so they
+come on in the **next** session — restart Claude Code after you install
+the plugin. They stay on from then, every session.
 
 - **`less-code`** — the AI applies KISS, DRY, and YAGNI to every line it
   writes or reviews. Security, input validation, data-loss handling, and
