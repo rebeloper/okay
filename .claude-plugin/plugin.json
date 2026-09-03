@@ -1,6 +1,6 @@
 {
   "name": "okay",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Claude Code skills for developers who type their own code: explain, teach-me, quiz-me, now-i-do-it, wait-what, plus two always-on modes — less-code (KISS/DRY/YAGNI) and less-talk (trim + sandbox). The AI never writes your code.",
   "author": {
     "name": "Rebeloper",
