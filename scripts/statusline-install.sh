@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # statusline-install — shared status-bar install/uninstall logic for the
 # two okay toggles (less-code, less-talk).
-# Called from okay-installer.sh (fresh install) and each toggle skill's
-# "on" instructions — do_install is idempotent, so it's safe to call from
-# whichever toggle activates first. The installed script itself reads both
-# state files on every render and concatenates whichever segments are
-# active, so a single toggle going "off" only needs to write its own state
-# file — never do_uninstall, which would take the other toggle's
-# segments down with it. do_uninstall is reserved for a full plugin
-# uninstall (okay-installer.sh --uninstall).
+# Called from each toggle skill's "on" instructions and from the
+# SessionStart hook's first-run seeding — do_install is idempotent, so it's
+# safe to call from whichever toggle activates first. The installed script
+# itself reads both state files on every render and concatenates whichever
+# segments are active, so a single toggle going "off" only needs to write
+# its own state file — never do_uninstall, which would take the other
+# toggle's segments down with it. do_uninstall is reserved for the
+# uninstall subcommand.
 set -euo pipefail
 
 : "${CLAUDE_DIR:=$HOME/.claude}"
@@ -49,6 +49,8 @@ render_okay_segments() {
       else usage_rgb="233;216;166"; fi
       seg=$(printf '📈\033[38;2;%sm%s\033[0m' "$usage_rgb" "$usage")
 
+      # The statusline process doesn't inherit CLAUDE_CODE_SESSION_ID, so the
+      # session id must come from the render-input JSON; env is a fallback.
       local sid
       sid=$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
       [ -n "$sid" ] || sid="${CLAUDE_CODE_SESSION_ID:-default}"

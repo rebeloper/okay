@@ -86,6 +86,8 @@ run_hook() {
   ctx="$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")"
   [[ "$ctx" == *"less-talk is ACTIVE"* ]]
   [[ "$ctx" == *"less-code is ACTIVE"* ]]
+  # less-talk is emitted first, per the spec's order.
+  [[ "${ctx%%less-code is ACTIVE*}" == *"less-talk is ACTIVE"* ]]
 }
 
 @test "jq-missing fallback still emits valid JSON and exits 0" {

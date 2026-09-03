@@ -69,6 +69,15 @@ removing the plugin, delete it by hand:
 rm -rf ~/.okay/
 ```
 
+Removing the plugin also leaves an orphaned `~/.claude/hooks/statusline.sh`
+behind. To remove it, run:
+
+```
+bash <plugin-root>/scripts/statusline-install.sh uninstall
+```
+
+where `<plugin-root>` is the installed plugin directory.
+
 **Files `okay:now-i-do-it` leaves in a project.** In each project where you
 ran it, delete the answer-key folder by hand:
 
@@ -91,4 +100,4 @@ not want it.
 
 ## Output style
 
-Every skill writes ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each skill folder carries its own `reference-asd-ste100.md` copy, so each skill stays self-contained.
+The five content skills (`explain`, `teach-me`, `quiz-me`, `now-i-do-it`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained.

@@ -3,10 +3,8 @@
 # fresh session by reading their state files under ~/.okay/. Ships with the
 # plugin itself (wired via hooks/hooks.json).
 #
-# Both toggles are on-by-default: on first-ever run (state file missing
-# — e.g. installed via `claude plugin install` directly rather than through
-# okay-installer.sh) each seeds itself to "on" and installs the
-# status-bar segment.
+# Both toggles are on-by-default: on first-ever run (state file missing)
+# each seeds itself to "on" and installs the status-bar segment.
 set -euo pipefail
 
 : "${OKAY_DIR:=$HOME/.okay}"
@@ -40,20 +38,20 @@ append_msg() {
 }
 
 if is_on "less-talk"; then
-  append_msg 'less-talk is ACTIVE (persisted from a prior session). Apply trim communication at lite level to every reply, and route large command/file output through okay-sandbox.mjs instead of dumping raw output. Do not announce it.'
+  append_msg 'less-talk is ACTIVE. Apply trim communication at lite level to every reply, and route large command/file output through okay-sandbox.mjs instead of dumping raw output. Do not announce it.'
 fi
 
 if is_on "less-code"; then
-  append_msg 'less-code is ACTIVE (persisted from a prior session). Apply KISS, DRY, and YAGNI to all code written or reviewed this session, while never cutting security, input validation, data-loss handling, or accessibility. Do not announce it.'
+  append_msg 'less-code is ACTIVE. Apply KISS, DRY, and YAGNI to all code written or reviewed this session, while never cutting security, input validation, data-loss handling, or accessibility. Do not announce it.'
 fi
 
 if [ -n "$MSG" ]; then
   if command -v jq >/dev/null 2>&1; then
     jq -n --arg ctx "$MSG" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'
   else
-    # jq missing (plugin installed without okay-installer.sh's dependency
-    # check): hand-escape the JSON-special characters the message can contain
-    # instead of dying under set -e and silently re-arming nothing.
+    # jq missing from the user's PATH: hand-escape the JSON-special
+    # characters the message can contain instead of dying under set -e and
+    # silently re-arming nothing.
     esc=${MSG//\\/\\\\}
     esc=${esc//\"/\\\"}
     esc=${esc//$'\n'/\\n}

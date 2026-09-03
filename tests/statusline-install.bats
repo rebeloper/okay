@@ -209,14 +209,6 @@ render() {
   [[ "$output" == "💎·📈"* ]]
 }
 
-@test "active segments are joined with a middle dot separator" {
-  do_install >/dev/null
-  echo on > "$OKAY_DIR/less-code"
-  echo on > "$OKAY_DIR/less-talk"
-  run render '{"context_window":{"total_input_tokens":500}}'
-  [[ "$output" == "💎·📈"* ]]
-}
-
 @test "less-talk segment appends used_percentage in parentheses when present" {
   do_install >/dev/null
   echo on > "$OKAY_DIR/less-talk"
