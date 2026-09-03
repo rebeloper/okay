@@ -44,4 +44,4 @@ One AskUserQuestion call per question, in order:
 A short plain-text recap: score as first-try-correct / total, and which questions needed retries (number + a few words each). No question dump.
 
 ## Step 5 — Next steps
-Plain chat, no AskUserQuestion. Offer: `/okay:explain` on the topics that needed retries, or `/okay:now-i-do-it` to rebuild code you just wrote, by hand.
+Plain chat, no AskUserQuestion. Offer: `/okay:explain` on the topics that needed retries.

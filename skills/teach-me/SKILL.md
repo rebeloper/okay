@@ -44,4 +44,4 @@ For the current step (or sub-step, if the step has any):
 3. On **Next**: if the current step has unfinished sub-steps, move to the next sub-step; otherwise move to the next top-level step. Repeat Step 4 for it.
 
 ## Step 5 — Recap and next steps
-When the last step is done, give a short plain-text recap: the steps covered, in order, one line each — no re-teaching. Then offer, in plain chat (no AskUserQuestion needed): `/okay:quiz-me` on this material to test retention, or `/okay:now-i-do-it` to rebuild code you just wrote, by hand.
+When the last step is done, give a short plain-text recap: the steps covered, in order, one line each — no re-teaching. Then offer, in plain chat (no AskUserQuestion needed): `/okay:quiz-me` on this material to test retention.
