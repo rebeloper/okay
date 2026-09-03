@@ -104,8 +104,10 @@ reinstall the bar on later sessions. Turning a mode back on with
 `/okay:less-code on` or `/okay:less-talk on` clears that and restores the
 bar.
 
-**Files `okay:now-i-do-it` leaves in a project.** In each project where you
-ran it, delete the answer-key folder by hand:
+**Files `okay:now-i-do-it` leaves in a project.** A run leaves two files
+under `.okay/`: the answer-key patch and a session log. The log lets a
+later run resume a rebuild you stopped halfway. In each project where you
+ran it, delete the folder by hand:
 
 ```
 rm -rf .okay/
@@ -117,7 +119,7 @@ not want it.
 ## The no-write principle
 
 1. `okay` never writes or edits your source code. It explains, teaches, quizzes, and paces. You type every line.
-2. `okay:now-i-do-it` writes exactly two non-source things: its answer-key patch under `.okay/`, and a `.okay/` line in `.gitignore` if that line is missing. It runs git commands that reset the working tree. It never authors code.
+2. `okay:now-i-do-it` writes exactly three non-source things: its answer-key patch under `.okay/`, its session log under `.okay/`, and a `.okay/` line in `.gitignore` if that line is missing. It runs git commands that reset the working tree. It never authors code.
 3. No hook enforces this. `okay`'s hooks re-arm the two always-on modes and
    gate large tool output — none of them lock your source. Subagents, Bash,
    and MCP tools can still bypass the no-write rule. The developer can also

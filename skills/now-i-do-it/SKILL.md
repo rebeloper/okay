@@ -1,6 +1,6 @@
 ---
 name: now-i-do-it
-description: "Replay your own uncommitted change. Reads the current git diff, saves it as an answer-key, reverts it from the working tree, then paces you to rebuild it by hand. Each chunk is three versions — one correct, two with a named trap; you pick, then type it yourself, and the skill checks every chunk against the answer-key. Takes an optional level: junior (the default) or teammate. Slash-command only, via /okay:now-i-do-it."
+description: "Replay your own uncommitted change. Reads the current git diff, saves it as an answer-key, reverts it from the working tree, then paces you to rebuild it by hand. Each chunk is three versions — one correct, two with a named trap; you pick, then type it yourself, and the skill checks every chunk against the answer-key. Resumes an unfinished rebuild in a later session. Takes an optional level: junior (the default) or teammate. Slash-command only, via /okay:now-i-do-it."
 argument-hint: "[junior (default) | teammate]"
 disable-model-invocation: true
 ---
@@ -28,9 +28,9 @@ every step, every option, and every line.
    developer asks. The developer can still override with an explicit
    instruction. That is their call, on their judgement. The skill
    states the risk one time, then defers.
-2. The skill DOES write two non-source things: the answer-key patch
-   file under `.okay/`, and one `.okay/` line in `.gitignore` if it is
-   missing. The skill DOES run tree-changing git commands:
+2. The skill DOES write three non-source things: the answer-key patch
+   file under `.okay/`, the session log under `.okay/`, and one
+   `.okay/` line in `.gitignore` if it is missing. The skill DOES run tree-changing git commands:
    `git add -N` and path-scoped `git add`, `git diff`, `git reset`,
    `git apply --check`, plus `git checkout --` and `rm` of captured new
    files. These are reference and reset actions. They are never code
@@ -53,6 +53,47 @@ every step, every option, and every line.
 
 Trim or brief communication modes compress prose only. They never skip a
 phase, a gate, or a check.
+
+## Step 0 — Check for an unfinished run
+
+Run this before every other step. It protects a part-built rebuild.
+
+1. Look for `.okay/session-*.md` at the repository root. If there is
+   none, go to Step 1.
+2. Read the newest log that still has an unticked chunk. A log with
+   every chunk ticked is a finished run. Ignore it.
+3. Capture nothing yet. Revert nothing yet. A dirty tree at this point
+   is probably the developer's part-built rebuild. Step 1 would capture
+   that fragment as a new answer-key. Step 2 would then revert it. This
+   step stops that.
+4. Check the log is still valid. Two tests:
+   - `git rev-parse HEAD` matches the `head` line in the log.
+   - The answer-key patch named in the log exists and is not empty.
+   Do not test the patch with `git apply --check`. A part-built rebuild
+   holds some of the change already, so the patch applies in neither
+   direction. That is normal here. It is not a fault.
+5. If `HEAD` moved, or the patch file is gone, the session is stale.
+   Say so. Name the log path and the patch path. Offer to delete the
+   log, or to stop. Do not resume. Do not capture.
+6. If the log is valid, ask with `AskUserQuestion`:
+   - **Resume the run** (Recommended). Continue at the first unticked
+     chunk.
+   - **Start fresh.** Delete the log only. Then go to Step 1. Say what
+     this costs first: the recorded progress goes, and Step 1 captures
+     the part-built rebuild as the new answer-key. Keep the old patch
+     file. It is the only record of the parts the developer has not
+     typed yet. Name its path.
+   - **Stop here.** Do nothing.
+7. To resume, read the level, the captured paths, the patch path, the
+   calibration note, and the chunk list from the log.
+8. Verify the ticked chunks are still on disk. Run
+   `git add -N -- <captured paths>`, then
+   `git diff HEAD -- <captured paths>`. Each ticked chunk's lines must
+   be present. If a ticked chunk is missing, tell the developer, untick
+   it in the log, and restart at the first unticked chunk.
+9. Give a short recap. State the problem in one or two sentences. List
+   the chunks that are done. Do not re-teach them. Then go to Step 9 at
+   the first unticked chunk. Skip Steps 1 to 8.
 
 ## Step 1 — Resolve level, check the repo, capture the change
 
@@ -91,9 +132,10 @@ phase, a gate, or a check.
    file content on disk is safe. Only the staging choice goes. Ask for an
    explicit nod if `git status --porcelain` shows any captured path with a
    staged change (an index status other than a space or `?`).
-9. If the diff is large (many files, or hundreds of lines), warn the
-   developer. The skill works best on one focused change. Offer to
-   narrow to a subset.
+9. If the diff is large (many files, or hundreds of lines), tell the
+   developer the size. Chunk size never changes, so a large diff gives
+   many chunks and a long run. Give a rough chunk count. Then offer to
+   narrow to a subset. The skill works best on one focused change.
 
 ## Step 2 — Save the answer-key, then revert
 
@@ -111,7 +153,8 @@ phase, a gate, or a check.
 3. If `.gitignore` at the repository root does not already ignore
    `.okay/`, append a `.okay/` line to it.
 4. Record in working notes: the absolute patch path, the `HEAD` sha
-   (`git rev-parse HEAD`), and the captured file list.
+   (`git rev-parse HEAD`), and the captured file list. Step 8 writes
+   these three into the session log.
 5. Tell the developer where the patch is saved. State that it is their
    reference and it stays until they delete it.
 6. Ask for an explicit nod before the revert.
@@ -180,7 +223,7 @@ as the loop runs. Do not show the developer a "level" label.
 
 ## Step 7 — Draft the build sequence (silently)
 
-- Break the answer-key into 3 to 8 chunks in authoring order. Authoring
+- Break the answer-key into chunks in authoring order. Authoring
   order is the order a developer actually writes code. The usual order
   is: the scaffold, the signature, or the types first. Then the
   happy-path core. Then the edge cases and the guards. Then the wiring
@@ -188,6 +231,11 @@ as the loop runs. Do not show the developer a "level" label.
 - Each chunk is decision-sized. It holds one coherent idea.
   It spans a few lines. It is not "lines 1 to 10". It is not one line,
   unless that line carries a real decision.
+- Chunk size is the rule. Chunk count follows from it. Use as many
+  chunks as the change needs. A small change gives 3 or 4 chunks. A
+  large change gives 30 or more. There is no maximum. Never make a
+  chunk bigger to keep the count low. Never split one coherent idea to
+  make the count high.
 - Chunk by intent, not by file position. A guard clause can sit at the
   top of the file. A developer can still think of it last. That guard
   clause is its own chunk. Narrate it when a developer would reach for
@@ -200,7 +248,13 @@ as the loop runs. Do not show the developer a "level" label.
 ## Step 8 — Show the build map, confirm start
 
 Print a short numbered outline. Show the chunk titles only. Give one line
-each. Use no code.
+each. Use no code. Number the chunks 1 to N in one sequence.
+
+If the outline runs past about 10 chunks, group the chunks under phase
+headings. A phase holds the chunks that build one part of the change.
+Give each phase a short title. Keep the chunk numbers continuous across
+the phases. The phases make a long map readable. They do not change the
+build. Step 9 still runs one chunk at a time.
 
 Then ask with `AskUserQuestion`:
 
@@ -209,13 +263,43 @@ Then ask with `AskUserQuestion`:
 - Adjust the sequence. The developer reshapes the outline before the
   build begins.
 
+When the sequence is settled, write the session log. Put it at
+`.okay/session-<timestamp>.md` at the repository root. Use the same
+`<timestamp>` as the answer-key patch. The `.okay/` line in `.gitignore`
+from Step 2 already covers it.
+
+The log holds the level, the `HEAD` sha, the patch path, the captured
+file list, one line of calibration notes from Step 6, and the chunk list
+in order as a checklist. Keep the phase headings if the map has them.
+Every chunk starts unticked. Example:
+
+```markdown
+# now-i-do-it session 20260903-141332
+level: junior
+head: 812bfdb3f9a1c04e2b7d5e8a6c1f0937bd4e2a55
+patch: .okay/answer-key-20260903-141332.patch
+captured: src/parser.ts
+calibration: knows the queue shape, new to two-pointer scheduling
+
+## Phase 1 — Scaffold
+- [ ] 1. Signature and the two queues
+- [ ] 2. Seed the queues from the input
+
+## Phase 2 — Core loop
+- [ ] 3. Compare the front indices
+```
+
+Step 9 ticks each chunk. Step 0 reads this file if the developer stops
+before the end.
+
 ## Step 9 — Type-along loop (per chunk)
 
 For the current chunk:
 
 1. Print a progress marker. Use the form `Chunk X/N — <title>`. `X` is
    the current chunk number. `N` is the total chunk count. `<title>` is
-   the chunk title from Step 7.
+   the chunk title from Step 7. If the Step 8 map has phases, name the
+   current phase in this line too.
 2. Narrate the chunk at the level set by the Step 6 calibration. Cover
    four things:
    - What these lines do.
@@ -272,7 +356,7 @@ For the current chunk:
    - Nothing new appears since the last chunk. Ask the developer to type
      the chunk first.
    - This chunk's lines are present. They match the answer-key. Say so.
-     Go to the next chunk.
+     Tick this chunk in the session log. Go to the next chunk.
    - The lines are wrong or drifted. Name the gap as a question.
      Example: `What happens here when the input is empty?`. Give one
      targeted hint. Let the developer fix the code. Let the developer
@@ -281,6 +365,16 @@ For the current chunk:
      re-enters this loop. A missing guard is a behavioural gap. A wrong
      edge case is a behavioural gap. A behavioural gap is never a polish
      note.
+9. The developer can pause at a chunk boundary. Tell them this one
+   time, at chunk 1. Do not ask after every chunk. That makes the loop
+   slow. When the developer pauses:
+   - Confirm the session log is current. The last ticked chunk is the
+     last chunk they finished.
+   - Give the count. Say how many chunks are done and how many are
+     left.
+   - Tell them `/okay:now-i-do-it` resumes at the next chunk.
+   - Tell them to keep their part-built work in the tree. Tell them a
+     new commit makes the session stale.
 
 ## Step 10 — Verify the rebuild
 
@@ -300,9 +394,10 @@ For the current chunk:
 
 ## Step 11 — Clean up and recap
 
-1. The rebuild matches the answer-key. Offer, with `AskUserQuestion`:
-   - Keep the patch file (Recommended).
-   - Delete it now.
+1. The rebuild matches the answer-key. Tick the last chunk in the
+   session log. Then offer, with `AskUserQuestion`:
+   - Keep the patch file and the session log (Recommended).
+   - Delete both now.
 2. Give a short plain-text recap. List the chunks in order, one line
    each. No re-teach.
 3. Offer, in plain chat (no `AskUserQuestion`): `/okay:quiz-me` on this
@@ -332,9 +427,10 @@ reads best there". Stop. Apply the rule.
   write access is on.
 - Skip the reveal. It always shows the code — as a gated 3-way choice.
 - Review code pasted into the chat. Only the git diff.
-- Persist between sessions. One rebuild, then done. The answer-key
-  patch file is the only thing left on disk, and only until the
-  developer deletes it.
+- Persist anything past the current rebuild. A run leaves two files
+  under `.okay/`: the answer-key patch and the session log. Step 0
+  resumes an unfinished run from that log. Nothing else survives, and
+  both files stay only until the developer deletes them.
 - Design large multi-file systems. One focused change per run.
 
 ## Relationship to the family
