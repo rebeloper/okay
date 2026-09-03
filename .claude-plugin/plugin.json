@@ -9,12 +9,5 @@
   "homepage": "https://github.com/rebeloper/okay",
   "repository": "https://github.com/rebeloper/okay",
   "license": "MIT",
-  "keywords": ["skills", "learning", "mentoring", "quiz", "explain", "type-it-yourself"],
-  "skills": [
-    "./skills/explain",
-    "./skills/teach-me",
-    "./skills/quiz-me",
-    "./skills/now-i-do-it",
-    "./skills/wait-what"
-  ]
+  "keywords": ["learning", "mentoring", "quiz", "explain", "type-it-yourself"]
 }

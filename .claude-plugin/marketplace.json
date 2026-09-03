@@ -9,7 +9,7 @@
     {
       "name": "okay",
       "source": "./",
-      "description": "explain, teach-me, quiz-me, now-i-do-it, wait-what: learn and rebuild code by hand. The AI never writes your code.",
+      "description": "explain, teach-me, quiz-me, now-i-do-it, wait-what: learn and build/rebuild code by hand. The AI never writes your code.",
       "category": "productivity",
       "keywords": ["learning", "mentoring", "quiz", "explain", "type-it-yourself"]
     }

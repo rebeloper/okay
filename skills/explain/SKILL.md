@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Explains any concept at a chosen depth. Takes a level argument — five (a five-year-old), junior (a junior dev/intern, the default), non-dev (a smart non-engineer), or teammate (an experienced dev new to this codebase). Default is junior. Use when the user wants something explained, says "explain like I'm five/a junior/a non-dev", "/okay:explain", or "ELI5".
+description: "Explains one concept at a chosen depth: five (a five-year-old), junior (a junior dev, the default), non-dev (a smart non-engineer), or teammate (an experienced dev new to this codebase). Slash-command only, via /okay:explain."
 argument-hint: "[five | junior (default) | non-dev | teammate] <topic>"
 disable-model-invocation: true
 ---

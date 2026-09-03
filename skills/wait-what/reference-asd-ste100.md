@@ -1,6 +1,6 @@
-# ASD-STE100 checklist for dev skill output
+# ASD-STE100 checklist for okay skill output
 
-Every message a dev skill sends the developer follows these rules.
+Every message an okay skill sends the developer follows these rules.
 This covers explanations, `AskUserQuestion` questions, option labels and
 descriptions, hints, and recap lines.
 

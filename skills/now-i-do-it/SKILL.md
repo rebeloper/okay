@@ -1,15 +1,6 @@
 ---
 name: now-i-do-it
-description: >
-  Replay YOUR uncommitted change. The skill reads the current git diff,
-  saves it as an answer-key, reverts it from the working tree, then paces
-  you to rebuild it by hand. Each chunk is three versions — one correct,
-  two with a named trap. You pick, then type it yourself. The skill checks
-  every chunk against the answer-key. Takes an optional level — junior (a
-  junior dev, the default) or teammate (an experienced dev new to this
-  codebase). Use when the user says "/okay:now-i-do-it", "let me rebuild
-  this myself", or "make me type this again". Do NOT use when the user
-  wants the code written for them, or has no uncommitted change.
+description: "Replay your own uncommitted change. Reads the current git diff, saves it as an answer-key, reverts it from the working tree, then paces you to rebuild it by hand. Each chunk is three versions — one correct, two with a named trap; you pick, then type it yourself, and the skill checks every chunk against the answer-key. Takes an optional level: junior (the default) or teammate. Slash-command only, via /okay:now-i-do-it."
 argument-hint: "[junior (default) | teammate]"
 disable-model-invocation: true
 ---
@@ -41,8 +32,9 @@ every step, every option, and every line.
    file under `.okay/`, and one `.okay/` line in `.gitignore` if it is
    missing. The skill DOES run tree-changing git commands:
    `git add -N` and path-scoped `git add`, `git diff`, `git reset`,
-   plus `git checkout --` and `rm` of captured new files. These are
-   reference and reset actions. They are never code authoring.
+   `git apply --check`, plus `git checkout --` and `rm` of captured new
+   files. These are reference and reset actions. They are never code
+   authoring.
 3. Every destructive change to the working tree needs the developer's
    explicit nod first. This covers the Step 2 revert and each new-file
    delete.
@@ -90,7 +82,9 @@ phase, a gate, or a check.
    `git add -A -- <captured paths>`, then
    `git diff --staged -- <captured paths>` for the patch text, then
    `git reset -- <captured paths>` to unstage. The tree keeps the
-   developer's work for now.
+   developer's work for now. Note: `git reset` here leaves the captured
+   paths unstaged. If the developer had staged some of them, tell them
+   the skill will restage everything at the end.
 8. If the diff is large (many files, or hundreds of lines), warn the
    developer. The skill works best on one focused change. Offer to
    narrow to a subset.
@@ -101,22 +95,29 @@ phase, a gate, or a check.
    repository root. `<timestamp>` is `YYYYMMDD-HHMMSS`. The patch text
    is the scoped `git diff --staged -- <captured paths>` output from
    Step 1.
-2. If `.gitignore` at the repository root does not already ignore
+2. Check the patch is restorable BEFORE any revert. Confirm the file
+   is not empty. Then run
+   `git apply --check --reverse .okay/answer-key-<timestamp>.patch`
+   from the repository root. It must pass. A pass proves the patch
+   matches the current change and applies back cleanly later. If the
+   file is empty or the check fails, stop. Do not revert. Tell the
+   developer the capture failed and their work is untouched.
+3. If `.gitignore` at the repository root does not already ignore
    `.okay/`, append a `.okay/` line to it.
-3. Record in working notes: the absolute patch path, the `HEAD` sha
+4. Record in working notes: the absolute patch path, the `HEAD` sha
    (`git rev-parse HEAD`), and the captured file list.
-4. Tell the developer where the patch is saved. State that it is their
+5. Tell the developer where the patch is saved. State that it is their
    reference and it stays until they delete it.
-5. Ask for an explicit nod before the revert.
-6. Revert only the captured paths:
+6. Ask for an explicit nod before the revert.
+7. Revert only the captured paths:
    - Tracked captured files: `git checkout -- <path>` for each.
    - New captured files: `rm <path>` for each, after confirming each
      path with the developer.
    - Never run a blanket `git clean`.
-7. To restore your work at any time, run
+8. To restore your work at any time, run
    `git apply .okay/answer-key-<timestamp>.patch` from the repository
    root.
-8. Verify. Run `git status --porcelain` for the captured paths. It must
+9. Verify. Run `git status --porcelain` for the captured paths. It must
    show nothing. If a captured path still shows a change, stop and tell
    the developer.
 
@@ -294,8 +295,8 @@ For the current chunk:
 ## Step 11 — Clean up and recap
 
 1. The rebuild matches the answer-key. Offer, with `AskUserQuestion`:
-   - Delete the patch file now (Recommended).
-   - Keep it.
+   - Keep the patch file (Recommended).
+   - Delete it now.
 2. Give a short plain-text recap. List the chunks in order, one line
    each. No re-teach.
 3. Offer, in plain chat (no `AskUserQuestion`): `/okay:quiz-me` on this

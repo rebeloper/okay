@@ -1,11 +1,11 @@
 ---
 name: teach-me
-description: Mentors the user through a resource end-to-end, live in chat. Takes a level argument — five (a five-year-old), junior (a junior dev/intern, the default), non-dev (a smart non-engineer), or teammate (an experienced dev new to this codebase) — same levels as explain — plus a resource (GitHub URL, local path, web page, the current chat, or a topic). Chunks the material into ordered steps and sub-steps, then walks the user through them one at a time, pausing to check pacing before advancing. Use when the user wants to be taught or walked through something, says "teach me X", "walk me through X", "/okay:teach-me", or wants a resource turned into a guided learning journey rather than a single explanation.
+description: "Turns one resource — a GitHub URL, local path, web page, the current chat, or a topic — into a paced, step-by-step learning journey, taught one step at a time with a pacing check before each advance. Takes the same level argument as okay:explain (five, junior, non-dev, teammate). Slash-command only, via /okay:teach-me."
 argument-hint: "[five | junior (default) | non-dev | teammate] <github-url | local-path | url | chat | topic>"
 disable-model-invocation: true
 ---
 
-Goal: turn ONE resource into a guided, paced learning journey — not a single wall-of-text explanation. Reuse `explain`'s level voices (`<skill-dir>/../explain/SKILL.md`) for HOW to talk; this skill's job is the chunking and pacing.
+Goal: turn ONE resource into a guided, paced learning journey — not a single wall-of-text explanation. Reuse `explain`'s level voices (`../explain/SKILL.md`) for HOW to talk; this skill's job is the chunking and pacing.
 
 ## Hard rules
 - **Teach one step (or sub-step) at a time.** Never dump the whole curriculum's content in one message, even if the user asks to skip ahead — jumping to a step is fine, dumping all of them is not.

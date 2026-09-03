@@ -1,6 +1,6 @@
 ---
 name: quiz-me
-description: Quizzes the user with multiple-choice questions drawn from anything — a GitHub URL, local path, web page, the current chat session, or a concept the user describes. Runs the quiz live in chat with hints and retries on wrong answers. Use when the user wants to be quizzed or to test their knowledge, says "quiz me", "quiz me on X", "test me on this", or "/okay:quiz-me". A bare "quiz me" with no topic quizzes on the current chat session.
+description: "Runs a live multiple-choice quiz on one topic — a GitHub URL, local path, web page, the current chat session, or a concept you describe. Wrong picks get a hint and a retry, never the answer. With no source given, quizzes on the current chat session. Slash-command only, via /okay:quiz-me."
 argument-hint: "<github-url | local-path | url | chat | topic> (default: current chat session)"
 disable-model-invocation: true
 ---
