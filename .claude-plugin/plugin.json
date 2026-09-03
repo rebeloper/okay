@@ -1,7 +1,7 @@
 {
   "name": "okay",
-  "version": "0.1.0",
-  "description": "Claude Code skills for developers who type their own code: explain, teach-me, quiz-me, now-i-do-it, wait-what. The AI never writes your code.",
+  "version": "0.2.0",
+  "description": "Claude Code skills for developers who type their own code: explain, teach-me, quiz-me, now-i-do-it, wait-what, plus two always-on modes — less-code (KISS/DRY/YAGNI) and less-talk (trim + sandbox). The AI never writes your code.",
   "author": {
     "name": "Rebeloper",
     "url": "https://github.com/rebeloper"
@@ -9,5 +9,5 @@
   "homepage": "https://github.com/rebeloper/okay",
   "repository": "https://github.com/rebeloper/okay",
   "license": "MIT",
-  "keywords": ["learning", "mentoring", "quiz", "explain", "type-it-yourself"]
+  "keywords": ["learning", "mentoring", "quiz", "explain", "type-it-yourself", "kiss", "dry", "yagni"]
 }

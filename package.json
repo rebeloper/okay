@@ -1,0 +1,8 @@
+{
+  "name": "okay",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "test:bats": "bats tests/"
+  }
+}
