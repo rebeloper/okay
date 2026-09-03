@@ -76,6 +76,30 @@ test('cat of a large file is a hard deny', () => {
   assert.equal(a.hard, true);
 });
 
+// Only unbounded `content` searches can dump. The default mode and `count`
+// are already bounded, so nudging them spent tokens to save none.
+test('Grep nudges only for unbounded content mode', () => {
+  const grep = (tool_input) => analyze({ tool_name: 'Grep', tool_input }).nudge;
+  assert.equal(grep({ pattern: 'x', output_mode: 'content' }), true);
+  assert.equal(grep({ pattern: 'x', output_mode: 'content', head_limit: 20 }), false);
+  assert.equal(grep({ pattern: 'x', output_mode: 'files_with_matches' }), false);
+  assert.equal(grep({ pattern: 'x', output_mode: 'count' }), false);
+  assert.equal(grep({ pattern: 'x' }), false); // defaults to files_with_matches
+});
+
+// A long option's value names a pattern, not a command to run.
+test('a dump word inside a long-option value is not a dump command', () => {
+  assert.equal(nudges('git log --grep=ERROR'), false);
+  assert.equal(nudges('rg --pattern=cat src/'), false);
+  assert.equal(nudges('mycmd --out=find.txt'), false);
+});
+
+// The strip must not let a real dump through: the command word is untouched.
+test('stripping long-option values still catches the real command', () => {
+  assert.equal(nudges('cat --show-all=1 huge.log'), true);
+  assert.equal(nudges('grep --color=never ERROR huge.log'), true);
+});
+
 test('buildOutput still soft-nudges Read/Grep matches', () => {
   const out = buildOutput({ tool: 'Read', nudge: true });
   const parsed = JSON.parse(out);

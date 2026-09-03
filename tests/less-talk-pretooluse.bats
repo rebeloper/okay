@@ -25,6 +25,20 @@ run_shim() {
   [ -z "$output" ]
 }
 
+# Regression: `exec node` used to fail with 127 and a stderr line on EVERY
+# Bash/Read/Grep call for anyone without node on their PATH.
+@test "exits 0 quietly when node is not on the PATH" {
+  echo on > "$OKAY_DIR/less-talk"
+  # An empty PATH is the point: it must find neither node nor `tr`, so the
+  # state read has to be builtin-only for this to reach the node guard.
+  mkdir -p "$BATS_TEST_TMPDIR/empty-bin"
+  run env -i PATH="$BATS_TEST_TMPDIR/empty-bin" OKAY_DIR="$OKAY_DIR" \
+    CLAUDE_PLUGIN_ROOT="$CLAUDE_PLUGIN_ROOT" "$(command -v bash)" "$SCRIPT" \
+    <<< '{"tool_name":"Bash","tool_input":{"command":"cat huge.log"}}'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "denies a dump-prone Bash command over a provably large file when on" {
   echo on > "$OKAY_DIR/less-talk"
   big_file="$BATS_TEST_TMPDIR/huge.log"

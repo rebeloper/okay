@@ -20,6 +20,12 @@ const DUMP_PATTERNS = [/\bcat\b/, /\bless\b/, /\bhead\b/, /\btail\b/, /\bcurl\b/
 // Commands already bounded/cheap — don't nudge these (grep -c, wc, head/tail -N,
 // | head|wc, and in-place sed -i edits, which write files rather than dump output).
 const BOUNDED = /\bwc\b|\bgrep\b[^|;&]*\s-\w*c|\b(?:head|tail)\b\s+-n?\s*\d+|\|\s*(?:head|wc)\b|\bsed\s+-[a-zA-Z]*i\b/;
+// A long option's value names a pattern or a path, never a command to run:
+// `git log --grep=ERROR` is not a grep. Strip those before pattern-matching so
+// they can't read as dump commands. Only DUMP_PATTERNS sees the stripped form
+// — BOUNDED and the file-size measurement keep the original, so this can only
+// remove false positives, never widen what gets denied.
+const stripFlagValues = (cmd) => cmd.replace(/--[\w-]+=\S*/g, ' ');
 
 // The resolved sandbox invocation the model should use instead. Built from
 // CLAUDE_PLUGIN_ROOT (inherited from the bash shim's environment) so the
@@ -63,12 +69,16 @@ export function analyze(payload, statSize = realStatSize) {
     return { tool, nudge: statSize(input.file_path || '') >= READ_NUDGE_THRESHOLD };
   }
   if (tool === 'Grep') {
-    return { tool, nudge: true };
+    // Only `content` mode dumps matched lines, and only without a head_limit.
+    // The default (`files_with_matches`) and `count` are already bounded, so
+    // nudging them spent tokens on every scoped search to save none.
+    const mode = input.output_mode || 'files_with_matches';
+    return { tool, nudge: mode === 'content' && !input.head_limit };
   }
   if (tool === 'Bash') {
     const cmd = input.command || '';
     if (/\bokay-sandbox\b/.test(cmd)) return { tool, nudge: false };    // already using the sandbox
-    if (!DUMP_PATTERNS.some((re) => re.test(cmd))) return { tool, nudge: false };
+    if (!DUMP_PATTERNS.some((re) => re.test(stripFlagValues(cmd)))) return { tool, nudge: false };
     if (BOUNDED.test(cmd)) return { tool, nudge: false };                   // already output-bounded
     // Only hard-deny what is provably large. A dump-prone command over a
     // provably small file runs untouched (denying `cat` of a 3-byte state

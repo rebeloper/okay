@@ -80,12 +80,18 @@ phase, a gate, or a check.
    command in this skill is scoped to them.
 7. Build the answer-key patch, scoped to the captured paths:
    `git add -A -- <captured paths>`, then
-   `git diff --staged -- <captured paths>` for the patch text, then
-   `git reset -- <captured paths>` to unstage. The tree keeps the
-   developer's work for now. Note: `git reset` here leaves the captured
-   paths unstaged. If the developer had staged some of them, tell them
-   the skill will restage everything at the end.
-8. If the diff is large (many files, or hundreds of lines), warn the
+   `git diff --staged --binary -- <captured paths>` for the patch text,
+   then `git reset -- <captured paths>` to unstage. Use `--binary`. Without
+   it a patch that touches a binary file cannot apply back, and the Step 2
+   check stops the run. The tree keeps the developer's work for now.
+8. This step discards the index for the captured paths. Say so before you
+   run it. `git add -A` overwrites what the developer had staged, and
+   `git reset` then unstages everything. A path staged at one version
+   while the working tree holds another loses that staged version. The
+   file content on disk is safe. Only the staging choice goes. Ask for an
+   explicit nod if `git status --porcelain` shows any captured path with a
+   staged change (an index status other than a space or `?`).
+9. If the diff is large (many files, or hundreds of lines), warn the
    developer. The skill works best on one focused change. Offer to
    narrow to a subset.
 
@@ -93,8 +99,8 @@ phase, a gate, or a check.
 
 1. Write the patch to `.okay/answer-key-<timestamp>.patch` at the
    repository root. `<timestamp>` is `YYYYMMDD-HHMMSS`. The patch text
-   is the scoped `git diff --staged -- <captured paths>` output from
-   Step 1.
+   is the scoped `git diff --staged --binary -- <captured paths>` output
+   from Step 1.
 2. Check the patch is restorable BEFORE any revert. Confirm the file
    is not empty. Then run
    `git apply --check --reverse .okay/answer-key-<timestamp>.patch`

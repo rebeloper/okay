@@ -12,6 +12,41 @@ render() {
   printf '%s' "$1" | env -u CLAUDE_CODE_SESSION_ID OKAY_DIR="$OKAY_DIR" bash "$STATUSLINE"
 }
 
+# Regression: installed_wrapped tested only for the backup's existence, so a
+# statusline.sh replaced by hand (or by another tool) while the backup survived
+# got silently overwritten with a wrapper around the script the user replaced.
+@test "install refuses to overwrite a statusline.sh that is not okay's" {
+  mkdir -p "$(dirname "$STATUSLINE")"
+  printf '#!/usr/bin/env bash\nprintf original\n' > "$BACKUP"
+  printf '#!/usr/bin/env bash\nprintf brand-new\n' > "$STATUSLINE"
+  run do_install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"refusing to overwrite"* ]]
+  [ "$(cat "$STATUSLINE" | tail -1)" = "printf brand-new" ]
+  [ "$(cat "$BACKUP" | tail -1)" = "printf original" ]
+}
+
+@test "uninstall reports an orphaned backup instead of claiming nothing to do" {
+  mkdir -p "$(dirname "$BACKUP")"
+  printf '#!/usr/bin/env bash\nprintf original\n' > "$BACKUP"
+  run do_uninstall
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$BACKUP"* ]]
+  [ -f "$BACKUP" ]
+}
+
+# The opt-out is how a user keeps the plugin but drops the bar; the
+# SessionStart hook reads it. Installing again is an explicit reversal.
+@test "uninstall records the opt-out and install clears it" {
+  do_install
+  run do_uninstall
+  [ "$status" -eq 0 ]
+  [ -f "$OKAY_DIR/statusline-optout" ]
+  run do_install
+  [ "$status" -eq 0 ]
+  [ ! -f "$OKAY_DIR/statusline-optout" ]
+}
+
 @test "install creates a fresh statusline.sh and registers statusLine when none exists" {
   run do_install
   [ "$status" -eq 0 ]

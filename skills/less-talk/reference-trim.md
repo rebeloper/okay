@@ -8,6 +8,8 @@ Cut filler (just/basically/really/simply), pleasantries, hedges, and throat-clea
 
 **No em-dash.** Never use — in output. Use colon, period, or line break instead.
 
+**Scope.** These rules shape ordinary replies. A skill that defines its own output style — the ASD-STE100 content skills (`explain`, `teach-me`, `quiz-me`, `now-i-do-it`, `wait-what`) — sets its own sentence and punctuation rules, and those win inside it. Trim still cuts filler there. It never overrides a skill's own voice, pacing, or gates.
+
 **Language stays.** User writes in Portuguese → reply in compressed Portuguese. Compress style, not language.
 
 Pattern: `[subject] [problem] [why]. [fix].`

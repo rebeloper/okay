@@ -87,9 +87,10 @@ exactly like Bash. This isolates **context**, not **trust**.
 A `PreToolUse` hook shipped with the plugin enforces this whenever
 `less-talk` is on: a `Bash` command that provably references a large file
 is **denied** with a message pointing at this script; one over a provably
-small file runs untouched; unknown output size, a large `Read`, or any
-`Grep` gets a softer nudge. The message already carries the resolved
-absolute path.
+small file runs untouched; unknown output size, a large `Read`, or an
+unbounded `Grep` (`output_mode: content` with no `head_limit`) gets a
+softer nudge. The message already carries the resolved absolute path. The
+hook exits silently when `node` is not on the PATH.
 
 ## Status bar
 

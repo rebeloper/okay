@@ -48,35 +48,46 @@ Restart Claude Code afterward.
 
 `okay` needs `jq` and `node` on your PATH: `jq` for the status bar and the
 hook payloads, `node` for the sandbox runner and its PreToolUse gate.
-Without `jq` the two always-on modes still re-arm each session, but the
-status bar does not render.
+Neither is fatal. Without `jq` the two always-on modes still re-arm each
+session and the status bar simply does not render; it installs itself on
+the first session after `jq` becomes available. Without `node` the sandbox
+and its PreToolUse gate stay silent.
 
 ## Update and remove
 
 - Update: run `/plugin marketplace update okay`, then update `okay` from the
   `/plugin` menu. If the menu shows no update, run `/plugin uninstall
   okay@okay` then `/plugin install okay@okay` again.
-- Remove: run `/plugin uninstall okay@okay`, then `/plugin marketplace
-  remove okay` to drop the marketplace entry.
+- Remove: follow the three steps below, **in order**.
 
 Restart Claude Code after any update or removal.
 
-**State `okay` leaves on disk.** The two always-on modes keep their on/off
-state and the sandbox's per-session savings under `~/.okay/`. After
-removing the plugin, delete it by hand:
+**Removing `okay` cleanly.** The status-bar uninstaller lives inside the
+plugin, so run it *before* the plugin directory is deleted:
 
 ```
+# 1. while the plugin is still installed — removes okay's status bar and
+#    restores any statusline.sh that was there before
+bash <plugin-root>/scripts/statusline-install.sh uninstall
+
+# 2. then drop the plugin and the marketplace entry
+/plugin uninstall okay@okay
+/plugin marketplace remove okay
+
+# 3. then delete okay's own state (toggle values, sandbox savings)
 rm -rf ~/.okay/
 ```
 
-Removing the plugin also leaves an orphaned `~/.claude/hooks/statusline.sh`
-behind. To remove it, run:
+`<plugin-root>` is the installed plugin directory. If you uninstalled the
+plugin first, an orphaned `~/.claude/hooks/statusline.sh` is left behind —
+delete it by hand, and remove the `statusLine` entry from
+`~/.claude/settings.json` if it points at that file.
 
-```
-bash <plugin-root>/scripts/statusline-install.sh uninstall
-```
-
-where `<plugin-root>` is the installed plugin directory.
+Running the uninstaller while keeping the plugin is supported: it records
+the choice in `~/.okay/statusline-optout`, and the plugin will not
+reinstall the bar on later sessions. Turning a mode back on with
+`/okay:less-code on` or `/okay:less-talk on` clears that and restores the
+bar.
 
 **Files `okay:now-i-do-it` leaves in a project.** In each project where you
 ran it, delete the answer-key folder by hand:
@@ -97,6 +108,16 @@ not want it.
    and MCP tools can still bypass the no-write rule. The developer can also
    override it with an explicit instruction. That is their call.
 4. The rule is a promise kept by the skills' own behaviour. `okay` states this plainly. It does not pretend the rule is airtight.
+
+## Development
+
+```
+npm test          # node --test — sandbox runner and PreToolUse gate
+npm run test:bats # bats — SessionStart hook, PreToolUse shim, status bar
+```
+
+Both suites run on every push and pull request (`.github/workflows/test.yml`).
+`node --test` is deliberately bare: passing it a directory breaks on Node v26.
 
 ## Output style
 

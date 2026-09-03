@@ -124,11 +124,15 @@ export function statsPath() {
   const sid = process.env.CLAUDE_CODE_SESSION_ID;
   return join(statsDir(), sid || 'default');
 }
+// mkdir the directory we are about to append to, not the default one:
+// statsPath() honors OKAY_SANDBOX_STATS, so keying off statsDir() would
+// create a stray ~/.okay/less-talk-stats even when the caller redirected
+// the file elsewhere.
 export function recordOut(bytes) {
-  try { mkdirSync(statsDir(), { recursive: true }); appendFileSync(statsPath(), `out ${bytes}\n`); } catch { /* stats are best-effort */ }
+  try { mkdirSync(dirname(statsPath()), { recursive: true }); appendFileSync(statsPath(), `out ${bytes}\n`); } catch { /* stats are best-effort */ }
 }
 export function recordIn(bytes) {
-  try { mkdirSync(statsDir(), { recursive: true }); appendFileSync(statsPath(), `in ${bytes}\n`); } catch { /* stats are best-effort */ }
+  try { mkdirSync(dirname(statsPath()), { recursive: true }); appendFileSync(statsPath(), `in ${bytes}\n`); } catch { /* stats are best-effort */ }
 }
 
 export function measuredDir() {
@@ -167,7 +171,7 @@ export function measureIn(code) {
   }
   if (newlyCharged.length) {
     try {
-      mkdirSync(measuredDir(), { recursive: true });
+      mkdirSync(dirname(measuredPath()), { recursive: true });
       appendFileSync(measuredPath(), newlyCharged.map((p) => `${p}\n`).join(''));
     } catch { /* best-effort */ }
   }
