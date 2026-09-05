@@ -30,7 +30,7 @@ read and rewrite is the simple version. And AI reasons best well short of a
 full context window — past a couple hundred thousand tokens it starts to
 lose the thread. `less-talk` keeps replies compressed and routes large
 files and command output through a sandbox, so one `cat` of a big file does
-not flood the window you are learning in.
+not flood the context window you are learning in.
 
 ## The skills
 
