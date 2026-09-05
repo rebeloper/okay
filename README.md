@@ -37,7 +37,8 @@ Turn either off with `/okay:less-code off` or `/okay:less-talk off`. The
 choice persists across sessions. Turn back on the same way.
 
 The status bar shows `💎` while `less-code` is on and `📈<tokens>` while
-`less-talk` is on.
+`less-talk` is on, plus `·♻️~<tokens>` once the sandbox has kept tokens out
+of the context window.
 
 ## Install
 
