@@ -2,6 +2,36 @@
 
 `okay` is a set of Claude Code skills for developers who type their own code. The AI explains a concept, teaches a resource step by step, quizzes you, and paces a rebuild by hand. The AI does not write your code. You type every line.
 
+## Why
+
+A personal tutor is the best teacher anyone ever had. It knows what you
+already know, answers at your level, and never gets tired of the same
+question. That has always been too expensive for most people. AI makes it
+cheap. Almost every coding tool spends it on writing the code instead.
+
+`okay` spends it on you.
+
+When the AI writes the change, you skim a diff and move on. Little of it
+stays. When you judge the AI's suggestion, some of it stays — you had to
+decide whether it was right. When you type the line yourself, it stays.
+Retention becomes experience. Experience becomes expertise. There is no
+shortcut across that gap; there is only the work, done in less time and
+with better guidance.
+
+So here the AI is a mentor, not an author. It explains a concept, walks you
+through a resource, quizzes you, and paces a rebuild by hand. You type
+every line. The code you ship is code you understand — and still understand
+next month, when it breaks.
+
+The two always-on modes serve the same end. Left alone, AI overengineers:
+it reaches for the abstraction, the config flag, the extra layer nobody
+asked for. `less-code` holds it to KISS, DRY, and YAGNI, so the code you
+read and rewrite is the simple version. And AI reasons best well short of a
+full context window — past a couple hundred thousand tokens it starts to
+lose the thread. `less-talk` keeps replies compressed and routes large
+files and command output through a sandbox, so one `cat` of a big file does
+not flood the window you are learning in.
+
 ## The skills
 
 | Skill | Invoke | What it does |
