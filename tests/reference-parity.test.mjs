@@ -33,3 +33,13 @@ test('every ASD-STE100 reference copy is byte-identical', () => {
     assert.equal(readFileSync(copy, 'utf8'), expected, `${copy} has drifted from ${first}`);
   }
 });
+
+// The README's "Output style" section names the content skills by hand. That
+// list is derivable, so adding a skill used to desync it with no signal.
+test('the README output-style list matches the skills that carry the reference', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url).pathname, 'utf8');
+  const sentence = readme.match(/^The \w+ content skills \(([^)]+)\)/m);
+  assert.ok(sentence, 'README has no "The N content skills (...)" sentence to check');
+  const listed = sentence[1].split(',').map((s) => s.trim().replace(/`/g, ''));
+  assert.deepEqual(listed, skillsClaimingRef().sort(), 'README list is out of step with skills/');
+});

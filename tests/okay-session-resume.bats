@@ -163,3 +163,46 @@ run_hook() {
   run jq -e '.hooks.SessionStart[0].hooks[0].command | contains("okay-session-resume.sh")' "$HOOKS_JSON"
   [ "$status" -eq 0 ]
 }
+
+# The reference files hold the actual rules. The skill that names them only
+# loads on an explicit toggle, so the always-on path has to name them itself.
+@test "each reminder names its own reference file by absolute path" {
+  echo on > "$OKAY_DIR/less-talk"
+  echo on > "$OKAY_DIR/less-code"
+  run run_hook
+  [ "$status" -eq 0 ]
+  ctx="$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")"
+  [[ "$ctx" == *"$CLAUDE_PLUGIN_ROOT/skills/less-talk/reference-trim.md"* ]]
+  [[ "$ctx" == *"$CLAUDE_PLUGIN_ROOT/skills/less-code/reference-kiss.md"* ]]
+}
+
+# do_install exits 0 when settings.json already runs a different statusLine.
+# Swallowing that left a mode that says it is on and a bar that never renders.
+@test "surfaces a status-bar install warning instead of swallowing it" {
+  printf '{"statusLine":{"type":"command","command":"bash /somewhere/else.sh"}}' \
+    > "$CLAUDE_DIR/settings.json"
+  run run_hook
+  [ "$status" -eq 0 ]
+  ctx="$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")"
+  [[ "$ctx" == *"status bar could not be installed"* ]]
+  [[ "$ctx" == *"already runs a different command"* ]]
+}
+
+# The stale-backup branch leaves the bar uninstalled, so the install is retried
+# every session. Without the marker the same warning re-injects forever.
+@test "reports a given status-bar warning once, not every session" {
+  printf '{"statusLine":{"type":"command","command":"bash /somewhere/else.sh"}}' \
+    > "$CLAUDE_DIR/settings.json"
+  run run_hook
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" == *"could not be installed"* ]]
+  rm -f "$CLAUDE_DIR/hooks/statusline.sh"
+  run run_hook
+  [ "$status" -eq 0 ]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" != *"could not be installed"* ]]
+}
+
+@test "emits no install warning when the status bar installs cleanly" {
+  run run_hook
+  [ "$status" -eq 0 ]
+  [[ "$(jq -r '.hookSpecificOutput.additionalContext' <<<"$output")" != *"could not be installed"* ]]
+}

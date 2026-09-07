@@ -39,7 +39,20 @@ const BOUNDED = new RegExp([
   String.raw`\|\s*(?:head|wc)\b`,                               // piped into head/wc
   String.raw`${CMD_POS}(?:head|tail)\b`,                        // a slice, 10 lines by default
   String.raw`${CMD_POS}grep\b[^|]*(?:\s-\w*c\b|\s--count\b)`,  // grep -c / --count
+  // grep -m N / --max-count: at most N matched lines, same shape as head.
+  String.raw`${CMD_POS}grep\b[^|]*(?:\s-\w*m\s*\d|\s--max-count[=\s])`,
+  // grep -l / -L: one filename per match, never the matched lines themselves.
+  String.raw`${CMD_POS}grep\b[^|]*(?:\s-\w*[lL]\b|\s--files-(?:with|without)-match)`,
   String.raw`${CMD_POS}sed\s+-[a-zA-Z]*i\b`,                    // in-place edit, writes a file
+  // sed -n with a numeric line address: `sed -n '1,50p'` is the same bounded
+  // slice as `head -50`, and denying it while allowing head was incoherent.
+  // A pattern address (`sed -n '/foo/p'`) can still print the whole file, so
+  // the digits are required.
+  String.raw`${CMD_POS}sed\b[^|]*\s-\w*n\b[^|]*\b\d+(?:,\d*)?p\b`,
+  // stdout redirected to a file: nothing reaches the transcript at all.
+  // `2>&1` and `>&2` are not this, so the char before `>` must not be a
+  // digit or `&`, and the target must not start with `&`.
+  String.raw`(?:^|[^0-9&>])>>?\s*[^&\s|]`,
 ].join('|'));
 
 // The sandbox invoking itself must not re-trigger the gate. Match the actual

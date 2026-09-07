@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import {
   INTERPRETERS, runSnippet, formatResult,
-  recordOut, setToggle, statsPath, statePath, measureIn, measuredPath,
+  recordOut, statsPath, statePath, measureIn, measuredPath,
 } from '../skills/less-talk/scripts/okay-sandbox.mjs';
 
 // Some regressions only reproduce through the CLI entry point, not the exports.
@@ -87,7 +87,7 @@ test('snippet error returns exit code + bounded stderr tail', () => {
   assert.match(text, /exit 3/);
 });
 
-// ── stats + toggle ──────────────────────────────────────────────────────
+// ── stats ───────────────────────────────────────────────────────────────
 test('recordOut appends an out line to the stats file', () => {
   const f = `/tmp/okay-sandbox-stats-${process.pid}.log`;
   process.env.OKAY_SANDBOX_STATS = f;
@@ -137,18 +137,6 @@ test('measuredPath defaults under OKAY_DIR when set', () => {
   assert.equal(measuredPath(), `${dir}/less-talk-measured/default`);
   delete process.env.OKAY_DIR;
   if (prevSid !== undefined) process.env.CLAUDE_CODE_SESSION_ID = prevSid;
-});
-
-test('setToggle writes on/off to the state file', () => {
-  const f = `/tmp/okay-sandbox-state-${process.pid}`;
-  process.env.OKAY_SANDBOX_STATE = f;
-  setToggle('on');
-  assert.equal(readFileSync(f, 'utf8'), 'on');
-  setToggle('off');
-  assert.equal(readFileSync(f, 'utf8'), 'off');
-  assert.equal(statePath(), f);
-  rmSync(f, { force: true });
-  delete process.env.OKAY_SANDBOX_STATE;
 });
 
 test('statePath defaults under OKAY_DIR when set', () => {

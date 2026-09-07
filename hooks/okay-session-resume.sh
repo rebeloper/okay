@@ -39,11 +39,34 @@ is_on() {
 # and never try again. do_install is idempotent, so a no-op costs one grep.
 # $OPTOUT (written by do_uninstall) is how a user keeps the bar off while
 # keeping the plugin — never reinstall over that.
+# do_install exits 0 in two cases where the bar will never render: it refuses a
+# stale statusline.sh.pre-okay backup, and settings.json already runs a
+# different statusLine. Both print a line starting ⚠. Swallowing those left the
+# user with a mode that says it is on and a bar that never appears, forever —
+# so the warning goes into STATUS_WARN and out through the session message.
+STATUS_WARN=""
 ensure_status_bar() {
   [ -f "$OPTOUT" ] && return 0
   grep -qF "okay-statusline" "$STATUSLINE" 2>/dev/null && return 0
+  local out line
   # shellcheck disable=SC1091
-  ( source "$CLAUDE_PLUGIN_ROOT/scripts/statusline-install.sh" && do_install ) >/dev/null 2>&1 || true
+  out=$( ( source "$CLAUDE_PLUGIN_ROOT/scripts/statusline-install.sh" && do_install ) 2>&1 || true )
+  # Builtins only. A `grep` here wrote "command not found" to stderr on the
+  # PATH-stripped path, and a SessionStart hook's stderr is not free: it lands
+  # in the transcript next to the JSON this hook exists to print.
+  while IFS= read -r line; do
+    case "$line" in ⚠*) STATUS_WARN="$line" ;; esac
+  done <<< "$out"
+}
+
+# Report a warning once per distinct text. The stale-backup branch leaves the
+# bar uninstalled, so ensure_status_bar retries it every single session —
+# without this the same paragraph would be re-injected forever.
+warn_is_new() {
+  local seen="$OKAY_DIR/statusline-warning"
+  [ "$(cat "$seen" 2>/dev/null)" = "$1" ] && return 1
+  printf '%s' "$1" > "$seen" 2>/dev/null || true
+  return 0
 }
 
 if is_on "less-talk" || is_on "less-code"; then
@@ -64,12 +87,20 @@ append_msg() {
   fi
 }
 
+# Each mode's full rules live in a reference file next to its skill. The skill
+# itself only loads on an explicit `/okay:<mode> on|off`, which is a state
+# write, not a "read your rules" moment — so the always-on path has to name the
+# reference here or the rules never reach the model at all.
 if is_on "less-talk"; then
-  append_msg 'less-talk is ACTIVE. Apply trim communication at lite level to every reply, and route large command/file output through okay-sandbox.mjs instead of dumping raw output. Do not announce it.'
+  append_msg "less-talk is ACTIVE. Apply trim communication at lite level to every reply, and route large command/file output through okay-sandbox.mjs instead of dumping raw output. Do not announce it. Read $CLAUDE_PLUGIN_ROOT/skills/less-talk/reference-trim.md once before your first reply: it carries the compression rules, the no-em-dash rule, the safety override that drops the mode for destructive and security-critical output, and the rule that a skill defining its own voice wins inside that skill."
 fi
 
 if is_on "less-code"; then
-  append_msg 'less-code is ACTIVE. Apply KISS, DRY, and YAGNI to all code written or reviewed this session, while never cutting security, input validation, data-loss handling, or accessibility. Do not announce it.'
+  append_msg "less-code is ACTIVE. Apply KISS, DRY, and YAGNI to all code written or reviewed this session, while never cutting security, input validation, data-loss handling, or accessibility. Do not announce it. Read $CLAUDE_PLUGIN_ROOT/skills/less-code/reference-kiss.md once before you write or review code: it carries the decision ladder and the full guardrail list."
+fi
+
+if [ -n "$STATUS_WARN" ] && warn_is_new "$STATUS_WARN"; then
+  append_msg "okay's status bar could not be installed. Tell the user this, verbatim, once: $STATUS_WARN"
 fi
 
 if [ -n "$MSG" ]; then

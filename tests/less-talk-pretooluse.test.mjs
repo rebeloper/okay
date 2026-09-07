@@ -112,8 +112,42 @@ test('buildOutput is empty when not nudging', () => {
 });
 
 test('sed and awk now nudge (previously slipped through)', () => {
-  assert.equal(nudges("sed -n '1,5p' huge.log"), true);
+  // A pattern address can still print the whole file.
+  assert.equal(nudges("sed -n '/foo/p' huge.log"), true);
   assert.equal(nudges("awk '{print $1}' huge.log"), true);
+});
+
+// `sed -n '1,50p'` is the same bounded slice as `head -50`. Denying one while
+// allowing the other sent the model back for a second round trip to say the
+// same thing a different way.
+test('sed -n with a numeric line address is bounded, like head', () => {
+  assert.equal(nudges("sed -n '1,50p' huge.log"), false);
+  assert.equal(nudges('sed -n 5p huge.log'), false);
+});
+
+// These print at most N lines / one filename per match. `grep -c` was already
+// bounded; its siblings were not, and got hard-denied.
+test('grep forms that cap their own output are bounded', () => {
+  assert.equal(nudges('grep -m 5 ERROR huge.log'), false);
+  assert.equal(nudges('grep -m5 ERROR huge.log'), false);
+  assert.equal(nudges('grep --max-count=5 ERROR huge.log'), false);
+  assert.equal(nudges('grep -l TODO huge.log'), false);
+  assert.equal(nudges('grep -rL TODO huge.log'), false);
+  // Still unbounded without one of those flags.
+  assert.equal(nudges('grep -n ERROR huge.log'), true);
+});
+
+// Output sent to a file never reaches the transcript, so there is nothing to
+// save by rerouting it. Denying these blocked ordinary writes.
+test('stdout redirected to a file is not a dump', () => {
+  assert.equal(nudges('cat huge.log > out.txt'), false);
+  assert.equal(nudges('cat huge.log >> out.txt'), false);
+  assert.equal(nudges('cat huge.log > /dev/null 2>&1'), false);
+  // A stderr redirect is not a stdout redirect: these still dump.
+  assert.equal(nudges('cat huge.log 2>&1'), true);
+  assert.equal(nudges('cat huge.log 1>&2'), true);
+  // And a redirect in one segment does not excuse a dump in another.
+  assert.equal(nudges('cat huge.log > out.txt && cat huge.log'), true);
 });
 
 // In-place sed edits write files instead of dumping output — don't deny them

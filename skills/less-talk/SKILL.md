@@ -110,6 +110,12 @@ unbounded `Grep` (`output_mode: content` with no `head_limit`) gets a
 softer nudge. The message already carries the resolved absolute path. The
 hook exits silently when `node` is not on the PATH.
 
+A command that bounds its own output is never denied, however large the
+file: `head`/`tail`, `wc`, a pipe into `head`/`wc`, `grep -c`/`-m`/`-l`,
+`sed -n '1,50p'`, `sed -i`, and anything redirecting stdout to a file.
+Those cost the context window nothing, so rerouting them would only spend
+a round trip.
+
 ## Status bar
 
 While `less-talk` is on, the status bar shows `📈<usage>`: the bare

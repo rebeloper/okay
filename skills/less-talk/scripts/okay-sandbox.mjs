@@ -11,7 +11,7 @@
 // plugin with its own product-state directory.
 
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, writeFileSync, readFileSync, realpathSync, renameSync, statSync, mkdirSync } from 'node:fs';
+import { appendFileSync, readFileSync, realpathSync, statSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -205,16 +205,6 @@ export function measureIn(code) {
     } catch { /* best-effort */ }
   }
   return total;
-}
-// Write-then-rename: `writeFileSync` truncates first, so a reader landing in
-// that window (pretooluse's isOn, the status bar) sees an empty file and reads
-// the mode as off. A rename is atomic, so readers see only old or new.
-export function setToggle(value) {
-  const target = statePath();
-  mkdirSync(dirname(target), { recursive: true });
-  const tmp = `${target}.tmp.${process.pid}`;
-  writeFileSync(tmp, value === 'on' ? 'on' : 'off');
-  renameSync(tmp, target);
 }
 
 export function main(argv) {

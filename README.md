@@ -91,6 +91,11 @@ session and the status bar simply does not render; it installs itself on
 the first session after `jq` becomes available. Without `node` the sandbox
 and its PreToolUse gate stay silent.
 
+If the status bar cannot be installed — `settings.json` already runs a
+different `statusLine`, or a stale `statusline.sh.pre-okay` backup is in the
+way — `okay` says so once, at the start of the next session, and names the
+reason. The modes themselves are unaffected and stay on.
+
 ## Update and remove
 
 - Update: run `/plugin marketplace update okay`, then update `okay` from the

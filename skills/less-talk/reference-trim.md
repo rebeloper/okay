@@ -8,7 +8,7 @@ Cut filler (just/basically/really/simply), pleasantries, hedges, and throat-clea
 
 **No em-dash.** Never use — in output. Use colon, period, or line break instead.
 
-**Scope.** These rules shape ordinary replies. A skill that defines its own output style — every skill carrying a `reference-asd-ste100.md`: `audit`, `explain`, `mentor-me`, `now-i-do-it`, `quiz-me`, `teach-me`, `wait-what` — sets its own sentence and punctuation rules, and those win inside it, the em-dash rule included. Trim still cuts filler there. It never overrides a skill's own voice, pacing, or gates.
+**Scope.** These rules shape ordinary replies. A skill that defines its own output style sets its own sentence and punctuation rules, and those win inside it, the em-dash rule included. Any skill folder holding a `reference-asd-ste100.md` is such a skill. Trim still cuts filler there. It never overrides a skill's own voice, pacing, or gates.
 
 **Language stays.** User writes in Portuguese → reply in compressed Portuguese. Compress style, not language.
 
