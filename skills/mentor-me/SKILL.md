@@ -12,7 +12,7 @@ Use `okay:teach-me` for one resource in one sitting. Use this skill for a skill 
 ## Hard rules
 - **Plain markdown only.** No HTML. No CSS. No quiz widgets. No simulators. Lessons and notes are `.md` files. Practice happens in the chat, not in a file.
 - **Teach the next thing only.** Pick the step that is just hard enough. Never dump the whole field.
-- **Default every check to multiple choice.** Use one `AskUserQuestion` call with 4 options and one correct answer. This covers "what does this code print" checks too. Fall back to free recall only when the task is open-ended, such as writing real code.
+- **Default every check to multiple choice.** Use one `AskUserQuestion` call with 3 options and one correct answer — the same width as `okay:quiz-me`, which this skill hands off to. `AskUserQuestion` caps options at 4 and adds "Other" itself, so 3 keeps the interaction clean. This covers "what does this code print" checks too. Fall back to free recall only when the task is open-ended, such as writing real code.
 - **Never overwrite a mission.** One workspace holds one mission.
 - **Write every message in ASD-STE100 Simplified Technical English** — see `reference-asd-ste100.md` in this folder. Short sentences. One idea per sentence. Active voice. Plain words.
 - These rules are unconditional. Trim or brief communication modes compress prose, never pacing or interaction gates.
@@ -38,9 +38,12 @@ Create each file only when you first need it. See `FORMATS.md` in this folder fo
 
 Look at the current directory:
 
-- **No `MISSION.md`** → run **First session**.
-- **`MISSION.md` exists** → run **Each session**.
-- **`MISSION.md` exists, but the user named a different topic** → stop. This folder holds another mission. Ask the user to continue the existing mission, or to start the new topic in a new directory. Never overwrite `MISSION.md`.
+Test the branches in this order and take the first that matches. They are not exclusive on their own.
+
+1. **`MISSION.md` exists, and the user named a topic that `MISSION.md` does not cover** → stop. Compare the named topic against the mission statement inside `MISSION.md`, not against the folder name. This folder holds another mission. Ask the user to continue the existing mission, or to start the new topic in a new directory. Never overwrite `MISSION.md`.
+2. **`MISSION.md` exists** → run **Each session**.
+3. **No `MISSION.md`, but `lessons/` or `learning-records/` holds files** → stop. The workspace is half-built, or it belongs to a mission whose `MISSION.md` was deleted. Starting a First session here would number new lessons on top of the old ones. Say what you found. Ask the user to name the mission so you can write `MISSION.md`, or to start in a new directory.
+4. **No `MISSION.md`, and no lesson or record files** → run **First session**.
 
 ## Step 2 — First session
 
@@ -51,8 +54,8 @@ Look at the current directory:
 
 ## Step 3 — Each session
 
-1. Read the files that exist: `MISSION.md`, `GLOSSARY.md`, `learning-records/`, and `NOTES.md`. Find the next step. Open with a recap of 2-3 lines: the mission, what the user has nailed, and what comes next.
-2. **Start with retrieval, not new material.** Quiz one item from an earlier session. Use `AskUserQuestion` with 4 options and one correct answer. Sometimes ask the user to predict their confidence first, then compare. This shows the illusion of knowing.
+1. Read the files that exist: `MISSION.md`, `RESOURCES.md`, `GLOSSARY.md`, `learning-records/`, and `NOTES.md`. List `lessons/` too — item 4 numbers the new lesson from the highest file already there, and item 4 cites `RESOURCES.md`. Without both, lesson numbers collide or restart. Find the next step. Open with a recap of 2-3 lines: the mission, what the user has nailed, and what comes next.
+2. **Start with retrieval, not new material.** Quiz one item from an earlier session. Use `AskUserQuestion` with 3 options and one correct answer. Sometimes ask the user to predict their confidence first, then compare. This shows the illusion of knowing.
 3. Pick the next lesson. One tangible win, tied to the mission. Mix topics: every few sessions, revisit an earlier one instead of pushing the frontier.
 4. Write the lesson to `lessons/NNNN-slug.md`. Keep it brief. Cite `RESOURCES.md`. End with 2-3 follow-up prompts.
 5. Run practice. Default to multiple-choice checks: concept recall, "what does this code do", and spot-the-bug. Write distractors that are real mistakes, not filler. For open-ended tasks, ask the user to write real code or to explain the idea back. Ask *why* it works. Give feedback at once.

@@ -127,9 +127,17 @@ rm -rf ~/.okay/
 ```
 
 `<plugin-root>` is the installed plugin directory. If you uninstalled the
-plugin first, an orphaned `~/.claude/hooks/statusline.sh` is left behind —
-delete it by hand, and remove the `statusLine` entry from
-`~/.claude/settings.json` if it points at that file.
+plugin first, an orphaned `~/.claude/hooks/statusline.sh` is left behind.
+Clean it up by hand:
+
+- If `~/.claude/hooks/statusline.sh.pre-okay` exists, that is **your**
+  original status line, saved when `okay` wrapped it. Restore it:
+  `mv ~/.claude/hooks/statusline.sh.pre-okay ~/.claude/hooks/statusline.sh`.
+  Deleting the wrapper without this leaves your own script behind as a
+  stale file that `rm -rf ~/.okay/` never reaches.
+- If there is no `.pre-okay` backup, `okay` created the file. Delete it,
+  and remove the `statusLine` entry from `~/.claude/settings.json` if it
+  points at that file.
 
 Running the uninstaller while keeping the plugin is supported: it records
 the choice in `~/.okay/statusline-optout`, and the plugin will not
@@ -162,7 +170,7 @@ not want it.
 
 ## Development
 
-`node --test` — sandbox runner and PreToolUse gate:
+`node --test` — sandbox runner, PreToolUse gate, and reference parity:
 
 ```
 npm test
@@ -181,4 +189,4 @@ To cut a release, see [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## Output style
 
-The six content skills (`explain`, `teach-me`, `mentor-me`, `quiz-me`, `now-i-do-it`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained.
+The seven content skills (`audit`, `explain`, `mentor-me`, `now-i-do-it`, `quiz-me`, `teach-me`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained. The copies must stay byte-identical: edit one, then copy it to the rest. `tests/reference-parity.test.mjs` fails if a copy drifts, and fails if a skill names the reference without shipping it.

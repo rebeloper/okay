@@ -11,7 +11,7 @@ Keep scope small. A single concept, module, or article makes a good quiz; a whol
 
 ## Hard rules
 - **Every question is its own AskUserQuestion call.** Never print the question list in chat — not before the quiz, not during, not instead of asking. The user sees each question for the first time inside its own AskUserQuestion call, with no marker on the correct choice.
-- **Wrong pick → hint, not answer.** The explanation is revealed only once the question is resolved.
+- **Wrong pick → hint, not answer.** The explanation is revealed only once the question is resolved. One exception, and only this one: when eliminating the wrong pick would leave a single choice, the question is already resolved, so reveal it with the explanation rather than ask a question with one answer. Step 3 states the same rule.
 - **Write every question, option, hint, and explanation in ASD-STE100 Simplified Technical English** — see `reference-asd-ste100.md` in this folder. Short sentences. One idea per sentence. Active voice. Plain words.
 - These rules are unconditional. Trim/brief communication modes compress prose, never interaction gates.
 
@@ -36,7 +36,7 @@ One AskUserQuestion call per question, in order:
 - **question:** `Q 3/10 — <question text>`
 - **options:** the choices, correct one unmarked, no "(Recommended)" labels.
 - **Correct pick** → confirm in one line with the explanation, move to the next question.
-- **Wrong pick** → give the hint (one line, no answer), re-ask the same question with the eliminated choice removed. If only one choice would remain, reveal the answer with the explanation instead of re-asking, and move on.
+- **Wrong pick** → give the hint (one line, no answer), re-ask the same question with the eliminated choice removed. If only one choice would remain, the question is resolved: reveal the answer with the explanation instead of re-asking, and move on. This is the one case the hard rule allows.
 - **Free-text reply via Other** → judge it as an answer attempt: correct → treat as a correct pick; wrong or off-topic → give the hint and re-ask with all choices intact.
 - Track for each question whether the first pick was correct.
 

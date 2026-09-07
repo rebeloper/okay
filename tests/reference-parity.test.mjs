@@ -9,13 +9,24 @@ import { join } from 'node:path';
 const SKILLS = new URL('../skills/', import.meta.url).pathname;
 const REF = 'reference-asd-ste100.md';
 
+// A skill that names the reference must ship it. Deriving the list from the
+// SKILL.md files rather than from the copies that happen to exist is the
+// point: filtering on existsSync could never fail on a deleted copy, so the
+// owning SKILL.md would point at a missing path with no test signal.
+const skillsClaimingRef = () => readdirSync(SKILLS)
+  .filter((skill) => existsSync(join(SKILLS, skill, 'SKILL.md')))
+  .filter((skill) => readFileSync(join(SKILLS, skill, 'SKILL.md'), 'utf8').includes(REF));
+
+test('every skill that names the ASD-STE100 reference ships a copy', () => {
+  const missing = skillsClaimingRef().filter((skill) => !existsSync(join(SKILLS, skill, REF)));
+  assert.deepEqual(missing, [], `these skills name ${REF} but do not carry it`);
+});
+
 test('every ASD-STE100 reference copy is byte-identical', () => {
-  const copies = readdirSync(SKILLS)
-    .map((skill) => join(SKILLS, skill, REF))
-    .filter((p) => existsSync(p));
+  const owners = skillsClaimingRef();
+  assert.ok(owners.length >= 7, `expected at least seven skills to carry ${REF}, found ${owners.length}`);
 
-  assert.ok(copies.length >= 5, `expected the five content skills to carry ${REF}`);
-
+  const copies = owners.map((skill) => join(SKILLS, skill, REF)).filter((p) => existsSync(p));
   const [first, ...rest] = copies;
   const expected = readFileSync(first, 'utf8');
   for (const copy of rest) {

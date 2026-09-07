@@ -122,3 +122,50 @@ test('sed -i in-place edits are not nudged', () => {
   assert.equal(nudges("sed -i '' 's/a/b/' config.txt"), false);
   assert.equal(nudges("sed -ri 's/a/b/' config.txt"), false);
 });
+
+// ── regressions ─────────────────────────────────────────────────────────
+// A bounded fragment anywhere on the line used to switch the whole gate off.
+// Boundedness has to hold for the segment that actually dumps.
+test('a bounded fragment elsewhere on the line does not excuse a dump', () => {
+  assert.equal(nudges('cat huge.log # wc'), true);
+  assert.equal(nudges('wc -l x.txt; cat huge.log'), true);
+  assert.equal(nudges('tail -5 small.txt && cat huge.log'), true);
+});
+
+// The self-exclusion matched the bare name anywhere, so naming the sandbox in
+// a comment or as a search pattern disarmed the gate.
+test('naming okay-sandbox without invoking it does not disarm the gate', () => {
+  assert.equal(nudges('cat huge.log  # okay-sandbox'), true);
+  assert.equal(nudges('grep okay-sandbox huge.log'), true);
+});
+
+// A dump word outside command position is a path or an argument, not a command.
+test('a dump word in a path is not a dump command', () => {
+  assert.equal(nudges('python3 process.py /data/cat/huge.log'), false);
+});
+
+// Only the dumping segment's files decide the size, so a large file that is
+// merely copied does not block the small dump next to it.
+test('size comes from the dumping segment, not the whole line', () => {
+  const stat = (p) => (p === 'huge.log' ? 2_200_000 : p === 'small.txt' ? 100 : 0);
+  const a = analyze({ tool_name: 'Bash', tool_input: { command: 'cp huge.log backup.log && cat small.txt' } }, stat);
+  assert.equal(a.nudge, false);
+});
+
+// head/tail are bounded by construction, and grep's long form counts too.
+test('bare head and grep --count are recognised as bounded', () => {
+  assert.equal(nudges('head huge.log'), false);
+  assert.equal(nudges('head -c 200 huge.log'), false);
+  assert.equal(nudges('grep --count ERROR huge.log'), false);
+});
+
+// A malformed payload used to throw an uncaught TypeError, which failed the
+// hook open and wrote a stack trace into the transcript.
+test('a malformed payload is refused, not crashed on', () => {
+  for (const payload of [null, undefined, 'string', 42, [], { tool_name: 'Bash' }]) {
+    assert.equal(analyze(payload, () => 0).nudge, false);
+  }
+  assert.equal(analyze({ tool_name: 'Bash', tool_input: { command: 123 } }, () => 0).nudge, false);
+  assert.equal(analyze({ tool_name: 'Read', tool_input: { file_path: {} } }, () => 0).nudge, false);
+  assert.equal(analyze({ tool_name: 'Bash', tool_input: 'not an object' }, () => 0).nudge, false);
+});

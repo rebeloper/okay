@@ -261,3 +261,30 @@ render() {
   [[ "$output" == *"·♻️"* ]]
   [[ "$output" != *" ♻️"* ]]
 }
+
+# The toggle skills run the script through its CLI (`bash statusline-install.sh
+# install`), not by sourcing it. That dispatch block, and the usage/exit-1 path
+# the skills' exit-code check depends on, had no coverage.
+@test "CLI dispatch: install runs do_install and reports success" {
+  run env CLAUDE_DIR="$CLAUDE_DIR" OKAY_DIR="$OKAY_DIR" bash "$SCRIPT" install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"status bar"* ]]
+}
+
+@test "CLI dispatch: uninstall runs do_uninstall" {
+  env CLAUDE_DIR="$CLAUDE_DIR" OKAY_DIR="$OKAY_DIR" bash "$SCRIPT" install
+  run env CLAUDE_DIR="$CLAUDE_DIR" OKAY_DIR="$OKAY_DIR" bash "$SCRIPT" uninstall
+  [ "$status" -eq 0 ]
+}
+
+@test "CLI dispatch: an unknown subcommand exits 1 with usage" {
+  run env CLAUDE_DIR="$CLAUDE_DIR" OKAY_DIR="$OKAY_DIR" bash "$SCRIPT" bogus
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"usage:"* ]]
+}
+
+@test "CLI dispatch: no subcommand exits 1 with usage" {
+  run env CLAUDE_DIR="$CLAUDE_DIR" OKAY_DIR="$OKAY_DIR" bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"usage:"* ]]
+}

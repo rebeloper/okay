@@ -104,7 +104,7 @@ Short notes in the style of an architecture decision record. Numbered in order â
 
 Write one when the user shows real understanding of something non-trivial, discloses prior knowledge, corrects a mistaken belief, or when the mission moves. Do NOT write one for material you merely covered. Coverage is not learning. Do NOT write one for a term that is already in the glossary.
 
-Optional sections, only when they add value: **Evidence** (how the user showed understanding), **Implications** (what it opens up or rules out), and a `Status: superseded by LR-NNNN` line when a later record corrects an earlier one. Supersede a record. Do not delete it.
+Optional sections, only when they add value: **Evidence** (how the user showed understanding), **Implications** (what it opens up or rules out), and a `Status: superseded by NNNN-slug` line when a later record corrects an earlier one. Supersede a record. Do not delete it.
 
 ---
 

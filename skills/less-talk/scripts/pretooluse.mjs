@@ -15,11 +15,37 @@ import { homedir } from 'node:os';
 import { statePath } from './okay-sandbox.mjs';
 
 const READ_NUDGE_THRESHOLD = 50 * 1024; // bytes
+
+// A command line often chains several commands, and boundedness has to hold for
+// the one that dumps — `tail -5 small.txt && cat huge.log` is not bounded, and
+// `cp huge.log bak && cat small.txt` dumps only the small file. Split on
+// statement separators (never on `|`, which is one pipeline) and judge each
+// segment on its own.
+const segments = (cmd) => cmd.split(/(?:&&|\|\||;|\n)+/).filter((seg) => seg.trim());
+
+// A dump word only counts in command position: the start of a segment, after a
+// pipe, or inside $( ) / backticks. Anywhere else it is a path or an argument —
+// `python3 run.py /data/cat/huge.log` runs no `cat`.
+const CMD_POS = String.raw`(?:^|\||\$\(|\x60)\s*(?:sudo\s+|time\s+|xargs\s+)?`;
 // Commands that tend to dump large output into the transcript.
-const DUMP_PATTERNS = [/\bcat\b/, /\bless\b/, /\bhead\b/, /\btail\b/, /\bcurl\b/, /\bwget\b/, /\bjq\b/, /\bfind\b/, /\bgrep\b/, /\bsed\b/, /\bawk\b/];
-// Commands already bounded/cheap — don't nudge these (grep -c, wc, head/tail -N,
-// | head|wc, and in-place sed -i edits, which write files rather than dump output).
-const BOUNDED = /\bwc\b|\bgrep\b[^|;&]*\s-\w*c|\b(?:head|tail)\b\s+-n?\s*\d+|\|\s*(?:head|wc)\b|\bsed\s+-[a-zA-Z]*i\b/;
+const DUMP_PATTERNS = ['cat', 'less', 'head', 'tail', 'curl', 'wget', 'jq', 'find', 'grep', 'sed', 'awk']
+  .map((word) => new RegExp(CMD_POS + word + String.raw`\b`));
+
+// Commands already bounded/cheap — don't nudge these. Anchored at command
+// position for the same reason: an unanchored `\bwc\b` meant the trailing
+// comment in `cat huge.log  # wc` switched the whole gate off.
+const BOUNDED = new RegExp([
+  String.raw`${CMD_POS}wc\b`,                                   // wc prints counts
+  String.raw`\|\s*(?:head|wc)\b`,                               // piped into head/wc
+  String.raw`${CMD_POS}(?:head|tail)\b`,                        // a slice, 10 lines by default
+  String.raw`${CMD_POS}grep\b[^|]*(?:\s-\w*c\b|\s--count\b)`,  // grep -c / --count
+  String.raw`${CMD_POS}sed\s+-[a-zA-Z]*i\b`,                    // in-place edit, writes a file
+].join('|'));
+
+// The sandbox invoking itself must not re-trigger the gate. Match the actual
+// invocation shape, not the bare name: an unanchored name let `cat huge.log
+// # okay-sandbox` and `grep okay-sandbox huge.log` switch the gate off.
+const SELF_INVOCATION = /^\s*(?:\w+=\S+\s+)*node\s+["']?\S*okay-sandbox\.mjs\b/;
 // A long option's value names a pattern or a path, never a command to run:
 // `git log --grep=ERROR` is not a grep. Strip those before pattern-matching so
 // they can't read as dump commands. Only DUMP_PATTERNS sees the stripped form
@@ -62,11 +88,16 @@ export function maxReferencedFileSize(cmd, statSize) {
 
 // Pure nudge decision. "in"/"out" measurement lives in the engine, not here.
 export function analyze(payload, statSize = realStatSize) {
-  const tool = payload.tool_name;
-  const input = payload.tool_input || {};
+  // The payload is whatever the harness piped in. A non-object, or a field of
+  // the wrong type, used to throw an uncaught TypeError — which failed the hook
+  // open and dumped a stack trace into the transcript.
+  const call = payload && typeof payload === 'object' ? payload : {};
+  const tool = call.tool_name;
+  const input = call.tool_input && typeof call.tool_input === 'object' ? call.tool_input : {};
 
   if (tool === 'Read') {
-    return { tool, nudge: statSize(input.file_path || '') >= READ_NUDGE_THRESHOLD };
+    const filePath = typeof input.file_path === 'string' ? input.file_path : '';
+    return { tool, nudge: statSize(filePath) >= READ_NUDGE_THRESHOLD };
   }
   if (tool === 'Grep') {
     // Only `content` mode dumps matched lines, and only without a head_limit.
@@ -76,15 +107,18 @@ export function analyze(payload, statSize = realStatSize) {
     return { tool, nudge: mode === 'content' && !input.head_limit };
   }
   if (tool === 'Bash') {
-    const cmd = input.command || '';
-    if (/\bokay-sandbox\b/.test(cmd)) return { tool, nudge: false };    // already using the sandbox
-    if (!DUMP_PATTERNS.some((re) => re.test(stripFlagValues(cmd)))) return { tool, nudge: false };
-    if (BOUNDED.test(cmd)) return { tool, nudge: false };                   // already output-bounded
+    const cmd = typeof input.command === 'string' ? input.command : '';
+    if (SELF_INVOCATION.test(cmd)) return { tool, nudge: false };  // already using the sandbox
+    const dumping = segments(cmd).filter((seg) =>
+      DUMP_PATTERNS.some((re) => re.test(stripFlagValues(seg))) && !BOUNDED.test(seg));
+    if (!dumping.length) return { tool, nudge: false };
     // Only hard-deny what is provably large. A dump-prone command over a
     // provably small file runs untouched (denying `cat` of a 3-byte state
     // file costs more tokens than it saves); unknown size (curl, globs,
     // pipes with no local file) gets a soft nudge instead of a block.
-    const size = maxReferencedFileSize(cmd, statSize);
+    // Size comes from the dumping segments only, so a large file that is
+    // merely copied alongside a small dump does not trigger a block.
+    const size = Math.max(0, ...dumping.map((seg) => maxReferencedFileSize(seg, statSize)));
     if (size >= READ_NUDGE_THRESHOLD) return { tool, nudge: true, hard: true };
     if (size > 0) return { tool, nudge: false };
     return { tool, nudge: true, hard: false };
@@ -114,11 +148,14 @@ function isOn() {
 
 export function main() {
   if (!isOn()) return 0;
-  let payload = {};
-  try { payload = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { return 0; }
-  const analysis = analyze(payload);
-  const out = buildOutput(analysis);
-  if (out) process.stdout.write(out);
+  // The whole body is guarded, not just the parse: a hook that throws fails
+  // open anyway, so it should do that quietly instead of writing a stack trace
+  // into the transcript this mode exists to keep small.
+  try {
+    const payload = JSON.parse(readFileSync(0, 'utf8') || '{}');
+    const out = buildOutput(analyze(payload));
+    if (out) process.stdout.write(out);
+  } catch { /* never block a tool call on a hook bug */ }
   return 0;
 }
 

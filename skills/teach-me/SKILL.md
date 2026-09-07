@@ -1,7 +1,7 @@
 ---
 name: teach-me
 description: "Turns one resource — a GitHub URL, local path, web page, the current chat, or a topic — into a paced, step-by-step learning journey, taught one step at a time with a pacing check before each advance. Takes the same level argument as okay:explain (five, junior, non-dev, teammate). Slash-command only, via /okay:teach-me."
-argument-hint: "[five | junior (default) | non-dev | teammate] <github-url | local-path | url | chat | topic>"
+argument-hint: "[five | junior (default) | non-dev | teammate] [github-url | local-path | url | chat | topic] (default: current chat session)"
 disable-model-invocation: true
 ---
 
@@ -41,6 +41,9 @@ For the current step (or sub-step, if the step has any):
    - **Go deeper on this**
    - **Explain it differently** — different analogy/angle, same level
    - Free-text reply via Other → answer their question, then re-offer this same check before advancing.
+   On **Go deeper on this** and on **Explain it differently**: give the
+   deeper or re-angled version of this same step, then re-offer this check.
+   Neither one advances on its own. Only **Next** advances.
 3. On **Next**: if the current step has unfinished sub-steps, move to the next sub-step; otherwise move to the next top-level step. Repeat Step 4 for it.
 
 ## Step 5 — Recap and next steps

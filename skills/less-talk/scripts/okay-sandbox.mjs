@@ -11,7 +11,7 @@
 // plugin with its own product-state directory.
 
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, writeFileSync, readFileSync, realpathSync, statSync, mkdirSync } from 'node:fs';
+import { appendFileSync, writeFileSync, readFileSync, realpathSync, renameSync, statSync, mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -64,24 +64,41 @@ export function runSnippet(lang, code, { timeoutMs }) {
   };
 }
 
-// Keep the last <=maxBytes, starting at a line boundary so we never split a
-// multi-byte UTF-8 codepoint (which would emit a replacement char).
+// A line boundary is also a codepoint boundary, but a slice with no newline in
+// it has neither — cutting there splits a multi-byte codepoint and decodes to
+// U+FFFD. These two drop the partial character left at the cut end.
+function dropPartialHead(buf) {
+  let i = 0;
+  while (i < buf.length && (buf[i] & 0xc0) === 0x80) i++;  // 10xxxxxx = continuation
+  return buf.subarray(i);
+}
+function dropPartialTail(buf) {
+  let i = buf.length - 1;
+  while (i >= 0 && (buf[i] & 0xc0) === 0x80) i--;
+  if (i < 0) return buf.subarray(0, 0);
+  const lead = buf[i];
+  if (lead < 0x80) return buf;                             // last byte is ASCII
+  const width = lead >= 0xf0 ? 4 : lead >= 0xe0 ? 3 : 2;
+  return i + width <= buf.length ? buf : buf.subarray(0, i);
+}
+
+// Keep the last <=maxBytes, starting at a line boundary where there is one.
 function tail(str, maxBytes) {
   const buf = Buffer.from(str, 'utf8');
   if (buf.length <= maxBytes) return str;
   let slice = buf.subarray(buf.length - maxBytes);
   const nl = slice.indexOf(0x0a);
-  if (nl >= 0 && nl < slice.length - 1) slice = slice.subarray(nl + 1);
+  slice = nl >= 0 && nl < slice.length - 1 ? slice.subarray(nl + 1) : dropPartialHead(slice);
   return slice.toString('utf8');
 }
 
-// Keep the first <=maxBytes, ending at a line boundary (same codepoint safety).
+// Keep the first <=maxBytes, ending at a line boundary where there is one.
 function head(str, maxBytes) {
   const buf = Buffer.from(str, 'utf8');
   if (buf.length <= maxBytes) return { text: str, truncated: false };
   let slice = buf.subarray(0, maxBytes);
   const nl = slice.lastIndexOf(0x0a);
-  if (nl > 0) slice = slice.subarray(0, nl);
+  slice = nl > 0 ? slice.subarray(0, nl) : dropPartialTail(slice);
   return { text: slice.toString('utf8'), truncated: true };
 }
 
@@ -95,16 +112,25 @@ export function formatResult(result, { lang, maxCapBytes, stderrTailBytes }) {
     const text = `[okay-sandbox] timed out`;
     return { text, outBytes: Buffer.byteLength(text) };
   }
-  if (!result.ok) {
-    const errTail = tail(result.stderr || '', stderrTailBytes);
-    const text = `${errTail}\n[okay-sandbox] exit ${result.status}`;
-    return { text, outBytes: Buffer.byteLength(text) };
-  }
-  // success
+  // Report stdout, stderr and the exit status independently. A non-zero exit
+  // does not mean the snippet printed nothing useful: `grep -c` exits 1 on
+  // zero matches after printing the `0` that was the whole point of the run.
   const { text: capped, truncated } = head(result.stdout || '', maxCapBytes);
-  const text = truncated
-    ? capped + `\n[okay-sandbox] …truncated — narrow with grep/head/count]`
-    : capped;
+  const errTail = tail(result.stderr || '', stderrTailBytes).trimEnd();
+  const parts = [];
+  if (capped) parts.push(capped);
+  if (truncated) parts.push('[okay-sandbox] …truncated — narrow with grep/head/count');
+  if (errTail) parts.push(errTail);
+  if (!result.ok) {
+    parts.push(result.signal
+      ? `[okay-sandbox] killed by ${result.signal}`
+      : `[okay-sandbox] exit ${result.status}`);
+  }
+  // A lone stdout is returned verbatim, trailing newline and all. Once there
+  // is more than one part, trim each so the sections do not gain blank lines.
+  const text = parts.length > 1
+    ? parts.map((part) => part.replace(/\n+$/, '')).join('\n')
+    : parts[0] || '';
   return { text, outBytes: Buffer.byteLength(text) };
 }
 
@@ -145,6 +171,7 @@ export function measuredPath() {
 }
 
 // Commands that name files without reading them — don't let these inflate "in".
+// Applied per line: a snippet that starts with `ls` still reads on line two.
 const NON_READERS = /^\s*(?:rm|mv|cp|ln|ls|stat|chmod|chown|touch|mkdir|rmdir)\b/;
 
 // Estimate "in" = total size of existing files the snippet reads. Heuristic (~ in
@@ -153,21 +180,23 @@ const NON_READERS = /^\s*(?:rm|mv|cp|ln|ls|stat|chmod|chown|touch|mkdir|rmdir)\b
 // Charged paths are logged per session (measuredPath) so re-referencing the same
 // file across separate sandbox calls only counts its size once.
 export function measureIn(code) {
-  if (NON_READERS.test(code)) return 0;
   let total = 0;
   const seen = new Set();
   let charged = new Set();
   try { charged = new Set(readFileSync(measuredPath(), 'utf8').split('\n').filter(Boolean)); } catch { /* none charged yet */ }
   const newlyCharged = [];
-  for (const tok of code.split(/[\s'"`|;&()<>=,]+/)) {
-    if (!tok || seen.has(tok)) continue;
-    seen.add(tok);
-    const path = tok === '~' || tok.startsWith('~/') ? homedir() + tok.slice(1) : tok;
-    if (charged.has(path)) continue;
-    try {
-      const st = statSync(path);
-      if (st.isFile()) { total += st.size; newlyCharged.push(path); }
-    } catch { /* not a path */ }
+  for (const line of code.split('\n')) {
+    if (NON_READERS.test(line)) continue;
+    for (const tok of line.split(/[\s'"`|;&()<>=,]+/)) {
+      if (!tok || seen.has(tok)) continue;
+      seen.add(tok);
+      const path = tok === '~' || tok.startsWith('~/') ? homedir() + tok.slice(1) : tok;
+      if (charged.has(path)) continue;
+      try {
+        const st = statSync(path);
+        if (st.isFile()) { total += st.size; newlyCharged.push(path); }
+      } catch { /* not a path */ }
+    }
   }
   if (newlyCharged.length) {
     try {
@@ -177,9 +206,15 @@ export function measureIn(code) {
   }
   return total;
 }
+// Write-then-rename: `writeFileSync` truncates first, so a reader landing in
+// that window (pretooluse's isOn, the status bar) sees an empty file and reads
+// the mode as off. A rename is atomic, so readers see only old or new.
 export function setToggle(value) {
-  mkdirSync(dirname(statePath()), { recursive: true });
-  writeFileSync(statePath(), value === 'on' ? 'on' : 'off');
+  const target = statePath();
+  mkdirSync(dirname(target), { recursive: true });
+  const tmp = `${target}.tmp.${process.pid}`;
+  writeFileSync(tmp, value === 'on' ? 'on' : 'off');
+  renameSync(tmp, target);
 }
 
 export function main(argv) {
@@ -187,17 +222,27 @@ export function main(argv) {
   let lang = null, timeoutMs = TIMEOUT_MS;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--lang') lang = argv[++i];
-    else if (argv[i] === '--timeout') { const n = Number(argv[++i]); if (Number.isFinite(n) && n > 0) timeoutMs = n * 1000; }
+    else if (argv[i] === '--timeout') {
+      // spawnSync wants a non-negative integer: round and clamp, or a value
+      // like 0.5 or 1e308 throws ERR_OUT_OF_RANGE before the snippet runs.
+      const n = Number(argv[++i]);
+      if (Number.isFinite(n) && n > 0) timeoutMs = Math.min(Math.round(n * 1000), 2 ** 31 - 1);
+    }
   }
   if (!lang) { process.stderr.write('usage: okay-sandbox --lang <lang>  (code on stdin)\n'); return 2; }
   if (process.stdin.isTTY) { process.stderr.write('okay-sandbox: no code on stdin — pipe a heredoc, e.g. node okay-sandbox.mjs --lang shell <<EOF … EOF\n'); return 2; }
 
   const code = readFileSync(0, 'utf8'); // fd 0 = stdin
-  const inBytes = measureIn(code);
   const result = runSnippet(lang, code, { timeoutMs });
   const { text, outBytes } = formatResult(result, { lang, maxCapBytes: MAX_CAP_BYTES, stderrTailBytes: STDERR_TAIL_BYTES });
-  if (inBytes > 0) recordIn(inBytes);
   recordOut(outBytes);
+  // Only a run that worked saved anything. Charging on failure booked the full
+  // file against a snippet that returned nothing, and left the corrected re-run
+  // with zero to claim, because measureIn had already marked the path charged.
+  if (result.ok) {
+    const inBytes = measureIn(code);
+    if (inBytes > 0) recordIn(inBytes);
+  }
   process.stdout.write(text);
   if (!text.endsWith('\n')) process.stdout.write('\n');
   return result.ok ? 0 : 1;

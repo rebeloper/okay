@@ -58,42 +58,52 @@ phase, a gate, or a check.
 
 Run this before every other step. It protects a part-built rebuild.
 
-1. Look for `.okay/session-*.md` at the repository root. If there is
+1. Confirm the project is a git repository first. If it is not, stop.
+   Say the project is not a git repository. Do not run any other check.
+   Every test below needs a repository, so a bare `git rev-parse` here
+   would report a stale session for a project that never had one.
+2. Look for `.okay/session-*.md` at the repository root. If there is
    none, go to Step 1.
-2. Read the newest log that still has an unticked chunk. A log with
+3. Read the newest log that still has an unticked chunk. A log with
    every chunk ticked is a finished run. Ignore it.
-3. Capture nothing yet. Revert nothing yet. A dirty tree at this point
+4. Capture nothing yet. Revert nothing yet. A dirty tree at this point
    is probably the developer's part-built rebuild. Step 1 would capture
    that fragment as a new answer-key. Step 2 would then revert it. This
    step stops that.
-4. Check the log is still valid. Two tests:
+5. Check the log is still valid. Two tests:
    - `git rev-parse HEAD` matches the `head` line in the log.
    - The answer-key patch named in the log exists and is not empty.
    Do not test the patch with `git apply --check`. A part-built rebuild
    holds some of the change already, so the patch applies in neither
    direction. That is normal here. It is not a fault.
-5. If `HEAD` moved, or the patch file is gone, the session is stale.
-   Say so. Name the log path and the patch path. Offer to delete the
-   log, or to stop. Do not resume. Do not capture.
-6. If the log is valid, ask with `AskUserQuestion`:
+6. If `HEAD` moved, or the patch file is gone, or the patch is empty,
+   the session is stale. Say so. Name the log path and the patch path.
+   Offer to delete the log, or to stop. Do not resume. Do not capture.
+7. If the log is valid, ask with `AskUserQuestion`:
    - **Resume the run** (Recommended). Continue at the first unticked
      chunk.
-   - **Start fresh.** Delete the log only. Then go to Step 1. Say what
-     this costs first: the recorded progress goes, and Step 1 captures
-     the part-built rebuild as the new answer-key. Keep the old patch
-     file. It is the only record of the parts the developer has not
-     typed yet. Name its path.
+   - **Start fresh.** Say what this costs first. The tree holds only
+     the part the developer already rebuilt. So Step 1 would capture
+     that fragment as the new answer-key, and Step 2 would revert it.
+     The rest of the original change would live only in the old patch
+     file. Restore the original change before you start fresh: revert
+     the captured paths, then run `git apply <the patch path from the
+     log>`. Then delete the log and go to Step 1. If the apply fails,
+     stop. Keep the log and the patch. Name both paths.
    - **Stop here.** Do nothing.
-7. To resume, read the level, the captured paths, the patch path, the
-   calibration note, and the chunk list from the log.
-8. Verify the ticked chunks are still on disk. Run
-   `git add -N -- <captured paths>`, then
-   `git diff HEAD -- <captured paths>`. Each ticked chunk's lines must
-   be present. If a ticked chunk is missing, tell the developer, untick
-   it in the log, and restart at the first unticked chunk.
-9. Give a short recap. State the problem in one or two sentences. List
-   the chunks that are done. Do not re-teach them. Then go to Step 9 at
-   the first unticked chunk. Skip Steps 1 to 8.
+8. To resume, read the level, the captured paths, the patch path, the
+   calibration note, the MCQ count, and the chunk list from the log.
+9. Verify the ticked chunks are still on disk. Run
+   `git add -N -- <captured paths that exist on disk>`, then
+   `git diff HEAD -- <captured paths>`. Pass only the paths that exist:
+   `git add -N` exits 128 on a pathspec that matches no file, and a
+   captured new file does not exist until the developer types it. Each
+   ticked chunk's lines must be present. If a ticked chunk is missing,
+   tell the developer, untick it in the log, and restart at the first
+   unticked chunk.
+10. Give a short recap. State the problem in one or two sentences. List
+    the chunks that are done. Do not re-teach them. Then go to Step 9 at
+    the first unticked chunk. Skip Steps 1 to 8.
 
 ## Step 1 — Resolve level, check the repo, capture the change
 
@@ -109,8 +119,10 @@ Run this before every other step. It protects a part-built rebuild.
    it shows no change and no untracked file, stop. Tell the developer:
    "Write the code first. Then run me."
 5. Record which files the change touches. Run `git status --porcelain`.
-   List the new (untracked) files separately with
-   `git ls-files --others --exclude-standard`.
+   Mark a file **new** when its status is `??` (untracked) or `A`
+   (added to the index). Both are new. `git ls-files --others` alone
+   misses the staged ones, and Step 2 reverts a new file and a tracked
+   file with different commands.
 6. Print the captured file list. Show line counts. Ask with
    `AskUserQuestion`:
    - Capture **all** of these files (Recommended).
@@ -119,19 +131,22 @@ Run this before every other step. It protects a part-built rebuild.
      Step 2.
    The files chosen here are *the captured paths*. Every later git
    command in this skill is scoped to them.
-7. Build the answer-key patch, scoped to the captured paths:
+7. Warn about the index BEFORE you touch it. Item 8 runs
+   `git add -A` and `git reset`, which together discard what the
+   developer had staged. A path staged at one version while the working
+   tree holds another loses that staged version. The file content on
+   disk is safe. Only the staging choice goes. So run
+   `git status --porcelain` now, while the index is still intact. If any
+   captured path shows a staged change (an index status other than a
+   space or `?`), say so and ask for an explicit nod before item 8. The
+   check must run first: after item 8 the index is already cleared, so
+   there is nothing left for it to find.
+8. Build the answer-key patch, scoped to the captured paths:
    `git add -A -- <captured paths>`, then
    `git diff --staged --binary -- <captured paths>` for the patch text,
    then `git reset -- <captured paths>` to unstage. Use `--binary`. Without
    it a patch that touches a binary file cannot apply back, and the Step 2
    check stops the run. The tree keeps the developer's work for now.
-8. This step discards the index for the captured paths. Say so before you
-   run it. `git add -A` overwrites what the developer had staged, and
-   `git reset` then unstages everything. A path staged at one version
-   while the working tree holds another loses that staged version. The
-   file content on disk is safe. Only the staging choice goes. Ask for an
-   explicit nod if `git status --porcelain` shows any captured path with a
-   staged change (an index status other than a space or `?`).
 9. If the diff is large (many files, or hundreds of lines), tell the
    developer the size. Chunk size never changes, so a large diff gives
    many chunks and a long run. Give a rough chunk count. Then offer to
@@ -150,25 +165,30 @@ Run this before every other step. It protects a part-built rebuild.
    matches the current change and applies back cleanly later. If the
    file is empty or the check fails, stop. Do not revert. Tell the
    developer the capture failed and their work is untouched.
-3. If `.gitignore` at the repository root does not already ignore
-   `.okay/`, append a `.okay/` line to it.
-4. Record in working notes: the absolute patch path, the `HEAD` sha
+3. Record in working notes: the absolute patch path, the `HEAD` sha
    (`git rev-parse HEAD`), and the captured file list. Step 8 writes
    these three into the session log.
-5. Tell the developer where the patch is saved. State that it is their
+4. Tell the developer where the patch is saved. State that it is their
    reference and it stays until they delete it.
-6. Ask for an explicit nod before the revert.
-7. Revert only the captured paths:
+5. Ask for an explicit nod before the revert.
+6. Revert only the captured paths:
    - Tracked captured files: `git checkout -- <path>` for each.
    - New captured files: `rm <path>` for each, after confirming each
      path with the developer.
    - Never run a blanket `git clean`.
-8. To restore your work at any time, run
+7. Tell the developer how to restore their work at any time: run
    `git apply .okay/answer-key-<timestamp>.patch` from the repository
-   root.
-9. Verify. Run `git status --porcelain` for the captured paths. It must
+   root. Substitute the real file name before you show this line.
+   `<timestamp>` is a placeholder. A developer cannot run it as printed.
+8. Verify. Run `git status --porcelain` for the captured paths. It must
    show nothing. If a captured path still shows a change, stop and tell
    the developer.
+9. Only now, after the revert and the verify, make sure `.gitignore` at
+   the repository root ignores `.okay/`. Append the line if it is
+   missing. It has to come last: `.gitignore` can itself be a captured
+   path, and item 6 would revert the line straight back out, which
+   leaves the patch and the log tracked and ready to be swept into the
+   developer's next commit.
 
 ## Step 3 — Explain the problem
 
@@ -269,9 +289,10 @@ When the sequence is settled, write the session log. Put it at
 from Step 2 already covers it.
 
 The log holds the level, the `HEAD` sha, the patch path, the captured
-file list, one line of calibration notes from Step 6, and the chunk list
-in order as a checklist. Keep the phase headings if the map has them.
-Every chunk starts unticked. Example:
+file list, one line of calibration notes from Step 6, the running MCQ
+count for the answer-slot rotation rule, and the chunk list in order as
+a checklist. Keep the phase headings if the map has them. Every chunk
+starts unticked. Example:
 
 ```markdown
 # now-i-do-it session 20260903-141332
@@ -280,6 +301,7 @@ head: 812bfdb3f9a1c04e2b7d5e8a6c1f0937bd4e2a55
 patch: .okay/answer-key-20260903-141332.patch
 captured: src/parser.ts
 calibration: knows the queue shape, new to two-pointer scheduling
+mcq-count: 0
 
 ## Phase 1 — Scaffold
 - [ ] 1. Signature and the two queues
@@ -289,8 +311,8 @@ calibration: knows the queue shape, new to two-pointer scheduling
 - [ ] 3. Compare the front indices
 ```
 
-Step 9 ticks each chunk. Step 0 reads this file if the developer stops
-before the end.
+Step 9 ticks each chunk and updates `mcq-count`. Step 0 reads this file
+if the developer stops before the end.
 
 ## Step 9 — Type-along loop (per chunk)
 
@@ -342,7 +364,10 @@ For the current chunk:
    developer to type those exact lines into the file by hand. Tell the
    developer to save the file. The skill does not write the lines.
 8. When the developer says the chunk is typed, check the change on disk.
-   Run `git add -N -- <captured paths>` first so new files show. Then
+   Run `git add -N -- <captured paths that exist on disk>` first so new
+   files show. Pass only the paths that exist: `git add -N` exits 128 on
+   a pathspec that matches no file, and a captured new file does not
+   exist until the developer has typed it. Then
    run `git diff HEAD -- <captured paths>`. Add
    `git diff --staged -- <captured paths>` if the developer staged the
    work. `git add -N` leaves the files unstaged. It does not disturb
@@ -378,10 +403,18 @@ For the current chunk:
 
 ## Step 10 — Verify the rebuild
 
-1. Stage and diff, scoped to the captured paths:
-   `git add -A -- <captured paths>` then
-   `git diff --staged -- <captured paths>`. Then
-   `git reset -- <captured paths>`.
+1. Diff the rebuild, scoped to the captured paths. Run
+   `git add -N -- <captured paths that exist on disk>` so new files
+   show, then `git diff HEAD --binary -- <captured paths>`. Two rules
+   hold here.
+   - Use `--binary`. The answer-key was built with it, so a binary file
+     produces a real delta there. A verification diff without `--binary`
+     says only `Binary files ... differ`, never matches, and sends the
+     developer back into the Step 9 loop with no way out.
+   - Never use `git add -A` here. `git add -N` leaves the files
+     unstaged, so it cannot discard the staging of a developer who has
+     just staged their finished rebuild. Hard rule 3 covers that, and
+     this step gets no second nod.
 2. Compare that patch to the saved answer-key patch. They must
    describe the same change. Ignore ordering noise and context-line
    differences; the added and removed lines must match.
@@ -408,9 +441,14 @@ For the current chunk:
 The correct option must not sit in the same slot every time. Models drift
 to slot 1. Stop that with a fixed rule.
 
-1. Keep one running count of every MCQ you ask this session. Start at 0
-   for the first one. This count spans the Step 6 concept question and
-   every Step 9 chunk pick.
+1. Keep one running count of every MCQ you ask. Start at 0 for the
+   first one. This count spans the Step 6 concept question and every
+   Step 9 chunk pick.
+   Write the count to the `mcq-count` line of the session log each time
+   it changes, and read it back on resume. The count has to survive a
+   resume: a run that restarts it at 0 puts the correct version in slot
+   1 on the first chunk after every resume, which is the exact drift
+   this rule exists to stop.
 2. For an MCQ with N options, put the correct option at index
    `count mod N` (0-based). So question 0 → slot 1, question 1 → slot 2,
    question 2 → slot 3, question 3 → slot 1, and so on.

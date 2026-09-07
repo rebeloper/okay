@@ -18,7 +18,11 @@ The user picks the review engine. You pick nothing for them.
 
 ## Step 1 — Resolve the target
 
-Read the argument and decide what it is. Do not assume a PR.
+Strip `--engine <name>` from the argument first, and keep it for Step 2.
+What is left is the target. An invocation of only `--engine <name>` has no
+target left, so it takes the no-argument default below.
+
+Read the rest of the argument and decide what it is. Do not assume a PR.
 
 | The argument looks like | Do this |
 |---|---|
@@ -26,7 +30,7 @@ Read the argument and decide what it is. Do not assume a PR.
 | A branch name | `git diff main...<branch>`. If there is no obvious base, use `git diff @{upstream}...HEAD` |
 | `diff`, or **no argument at all** | The working-tree diff: `git diff HEAD`. If the tree is clean, use `git diff @{upstream}...HEAD` |
 | A local file or folder path | Read the code as it is. There is no diff. Audit the whole thing |
-| A GitHub repo or folder URL | `git clone --depth 1`, then audit the named subtree |
+| A GitHub repo or folder URL | `git clone --depth 1 <url> <a fresh temp directory>`, then audit the named subtree. Always name a destination outside the user's own repository: a bare clone drops the tree into the current directory, where it shows as untracked content for every later `git status` in this family of skills |
 | A diff or a code block already in the chat | Use it as it is |
 | Anything else (a described scope) | Ask one plain-text question to pin down the files, then continue |
 
@@ -38,7 +42,9 @@ If the target is a folder or a repo and it is large, say so and ask the user to 
 
 ## Step 2 — Pick the engine
 
-If the user passed `--engine <name>`, use it. Skip this step, and say one line: `Engine: <name>.`
+If the user passed `--engine <name>`, and that engine is on this machine,
+use it. Skip this step, and say one line: `Engine: <name>.` If the named
+engine is not installed, say so in one line and run this step instead.
 
 Otherwise find out what this machine has. Check, in one pass:
 - `/code-review` — the built-in review skill. Almost always present.
@@ -47,8 +53,13 @@ Otherwise find out what this machine has. Check, in one pass:
 - Any project review skill — look in `.claude/skills/` and in the plugin skill list for a skill whose description is about review or audit.
 - **Subagent finder passes** — always available. You run independent Agent passes yourself: line-by-line scan, removed-behavior audit, cross-file tracer, reuse, simplification, efficiency, altitude.
 
-Then ask with `AskUserQuestion`, header `Engine`, listing **only what you found**, plus one option that is always there:
-- **`/code-review ultra`** — the cloud multi-agent review. A skill cannot start it. If the user picks it, print the exact command for them to type (`/code-review ultra` for the current branch, or `/code-review ultra <PR#>`), stop, and wait. When the review lands in the session, read its findings and go to Step 3.
+Then ask with `AskUserQuestion`, header `Engine`, listing **only what you
+found**, plus one option that is always there. `AskUserQuestion` takes at
+most 4 options, and the candidates can number more than that. So rank them
+for this target, list the best 3, and keep the 4th slot for `/code-review
+ultra`. Name the ones you dropped in one line under the question, so the
+user can still ask for them by name:
+- **`/code-review ultra`** — the cloud multi-agent review. A skill cannot start it. If the user picks it, print the exact command for them to type (`/code-review ultra` for the current branch, or `/code-review ultra <PR#>`), stop, and wait. When the review lands in the session, take its findings as the engine output and go straight to the normalizing part of Step 3. Do not try to run the engine yourself: this branch has already run it.
 
 Put the engine you judge best for this target first, and mark it `(Recommended)`.
 
@@ -103,14 +114,16 @@ Most severe first. For each finding:
 
 ## Step 6 — Tally
 
-Say: `Done. You caught X/N.`
+Say: `Done. You caught X/N.` X counts a finding the user named without
+help. A finding they named after a hint is not in X; it has its own line
+below. This keeps the score comparable between runs.
 
 Then up to three lists, one line each, and drop any list that is empty:
 - **✓ Caught** — found with no help
 - **✓ Caught (hinted)** — found after a hint
 - **→ Revealed** — told
 
-If the user caught them all, add `Clean sweep.`
+If the user caught them all with no help — X equals N — add `Clean sweep.`
 
 ## Step 7 — Next steps
 

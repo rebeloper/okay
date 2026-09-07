@@ -5,7 +5,7 @@ argument-hint: "[five | junior (default) | non-dev | teammate] <topic>"
 disable-model-invocation: true
 ---
 
-Explain the topic at hand at the requested level. The argument picks the listener; default to `junior` if no level is given. Each level changes WHO you're talking to — match their vocabulary, what they already know, and what they need.
+Explain the topic at hand at the requested level. The argument picks the listener; default to `junior` if no level is given. A bare level word and nothing else (`/okay:explain teammate`) is a level, not a topic: explain the topic at hand at that level. Say which reading you took in the first line, so the user can correct it in one word. Each level changes WHO you're talking to — match their vocabulary, what they already know, and what they need.
 
 Write every message in ASD-STE100 Simplified Technical English — see `reference-asd-ste100.md` in this folder. Short sentences. One idea per sentence. Active voice. Plain words. The level voice below sets vocabulary depth, analogy use, and code-or-no-code; these sentence and word rules apply on top of it.
 

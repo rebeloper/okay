@@ -1,10 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import {
   INTERPRETERS, runSnippet, formatResult,
   recordOut, setToggle, statsPath, statePath, measureIn, measuredPath,
 } from '../skills/less-talk/scripts/okay-sandbox.mjs';
+
+// Some regressions only reproduce through the CLI entry point, not the exports.
+const SANDBOX = new URL('../skills/less-talk/scripts/okay-sandbox.mjs', import.meta.url).pathname;
 
 // ── dispatch + execution ────────────────────────────────────────────────
 test('shell snippet returns only stdout', () => {
@@ -152,4 +156,93 @@ test('statePath defaults under OKAY_DIR when set', () => {
   process.env.OKAY_DIR = dir;
   assert.equal(statePath(), `${dir}/less-talk`);
   delete process.env.OKAY_DIR;
+});
+
+// ── regressions ─────────────────────────────────────────────────────────
+// A non-zero exit used to discard stdout entirely. `grep -c` exits 1 on zero
+// matches after printing the `0` that was the whole point of the run.
+test('a non-zero exit keeps the output the snippet already printed', () => {
+  const { text } = formatResult(
+    { ok: false, timedOut: false, stdout: '0\n', stderr: '', status: 1, missing: false },
+    { lang: 'shell', maxCapBytes: 50000, stderrTailBytes: 2000 });
+  assert.match(text, /^0\n/);
+  assert.match(text, /exit 1/);
+});
+
+// A successful run used to drop stderr, losing deprecation and partial-failure
+// warnings without a trace.
+test('a successful run still reports stderr', () => {
+  const { text } = formatResult(
+    { ok: true, stdout: 'ok\n', stderr: 'important warning\n', status: 0, missing: false },
+    { lang: 'shell', maxCapBytes: 50000, stderrTailBytes: 2000 });
+  assert.match(text, /ok/);
+  assert.match(text, /important warning/);
+});
+
+// A signal-killed snippet reported `exit null`, telling the model nothing.
+test('a signal-killed snippet names the signal', () => {
+  const { text } = formatResult(
+    { ok: false, timedOut: false, stdout: '', stderr: '', status: null, signal: 'SIGKILL', missing: false },
+    { lang: 'shell', maxCapBytes: 50000, stderrTailBytes: 2000 });
+  assert.match(text, /killed by SIGKILL/);
+});
+
+// Byte slicing with no newline in the slice used to split a codepoint and emit
+// U+FFFD at the cut.
+test('truncation never splits a multi-byte character', () => {
+  const wide = '中'.repeat(20000); // no newline anywhere
+  const { text } = formatResult(
+    { ok: true, stdout: wide, stderr: '', status: 0, missing: false },
+    { lang: 'shell', maxCapBytes: 50000, stderrTailBytes: 2000 });
+  assert.ok(!text.includes('�'), 'stdout cap must not emit a replacement char');
+  const { text: errText } = formatResult(
+    { ok: false, timedOut: false, stdout: '', stderr: wide, status: 1, missing: false },
+    { lang: 'shell', maxCapBytes: 50000, stderrTailBytes: 2000 });
+  assert.ok(!errText.includes('�'), 'stderr tail must not emit a replacement char');
+});
+
+// NON_READERS was matched against the whole snippet with a non-multiline `^`,
+// so a first line of `ls` zeroed the measurement for every line after it.
+test('a non-reading first line does not zero the rest of the snippet', () => {
+  const f = `/tmp/okay-sandbox-multiline-${process.pid}.txt`;
+  const measured = `/tmp/okay-sandbox-measured-multiline-${process.pid}.txt`;
+  process.env.OKAY_SANDBOX_MEASURED = measured;
+  rmSync(measured, { force: true });
+  writeFileSync(f, 'x'.repeat(4321));
+  assert.equal(measureIn(`ls -la\ngrep -c ERROR ${f}`), 4321);
+  rmSync(f, { force: true });
+  rmSync(measured, { force: true });
+  delete process.env.OKAY_SANDBOX_MEASURED;
+});
+
+// spawnSync wants an integer timeout: a fractional or overflowing --timeout
+// threw ERR_OUT_OF_RANGE before the snippet ever ran.
+test('a fractional or overflowing --timeout does not crash', () => {
+  for (const arg of ['0.0005', '1e308']) {
+    const r = spawnSync(process.execPath, [SANDBOX, '--lang', 'shell', '--timeout', arg], { input: 'echo hi', encoding: 'utf8' });
+    assert.equal(r.error, undefined);
+    assert.doesNotMatch(r.stderr || '', /ERR_OUT_OF_RANGE/);
+  }
+});
+
+// A failed run used to book the full "in" savings, leaving the corrected
+// re-run with nothing to claim because the path was already marked charged.
+test('a failed run books no savings, so the fixed re-run books them', () => {
+  const dir = `/tmp/okay-sandbox-charge-${process.pid}`;
+  const f = `${dir}/data.txt`;
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(f, 'x'.repeat(9876));
+  const env = {
+    ...process.env,
+    OKAY_SANDBOX_STATS: `${dir}/stats`,
+    OKAY_SANDBOX_MEASURED: `${dir}/measured`,
+    OKAY_SANDBOX_STATE: `${dir}/state`,
+  };
+  const run = (code) => spawnSync(process.execPath, [SANDBOX, '--lang', 'shell'], { input: code, encoding: 'utf8', env });
+  run(`nosuchcommand ${f}`);                    // fails
+  assert.doesNotMatch(readFileSync(`${dir}/stats`, 'utf8'), /^in /m, 'a failed run must not book savings');
+  run(`grep -c x ${f} > /dev/null; true`);      // succeeds
+  assert.match(readFileSync(`${dir}/stats`, 'utf8'), /^in 9876$/m);
+  rmSync(dir, { recursive: true, force: true });
 });
