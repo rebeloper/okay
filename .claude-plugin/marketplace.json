@@ -9,9 +9,9 @@
     {
       "name": "okay",
       "source": "./",
-      "description": "explain, teach-me, mentor-me, quiz-me, now-i-do-it, wait-what, less-code, less-talk: learn and build by hand, with KISS/DRY/YAGNI discipline and trimmed output on by default. The AI never writes your code.",
+      "description": "explain, teach-me, mentor-me, quiz-me, now-i-do-it, audit, wait-what, less-code, less-talk: learn and build by hand, with KISS/DRY/YAGNI discipline and trimmed output on by default. The AI never writes your code.",
       "category": "productivity",
-      "keywords": ["learning", "mentoring", "quiz", "explain", "type-it-yourself", "kiss", "dry", "yagni"]
+      "keywords": ["learning", "mentoring", "quiz", "audit", "code-review", "explain", "type-it-yourself", "kiss", "dry", "yagni"]
     }
   ]
 }

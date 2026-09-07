@@ -40,6 +40,7 @@ not flood the context window you are learning in.
 | `okay:teach-me` | `/okay:teach-me` | Turns one resource into a paced, step-by-step learning journey. Same levels. |
 | `okay:mentor-me` | `/okay:mentor-me` | Runs a long-haul learning workspace in plain markdown, across many sessions. |
 | `okay:quiz-me` | `/okay:quiz-me` | Live multiple-choice quiz. Hint and retry on a wrong pick. Never the answer. |
+| `okay:audit` | `/okay:audit` | Audits a PR, branch, diff, file, folder, or repo URL with the review engine you pick, then leads you to each finding yourself. |
 | `okay:now-i-do-it` | `/okay:now-i-do-it` | Saves your current git diff as an answer-key, reverts it, then paces you to rebuild it by hand. |
 | `okay:wait-what` | `/okay:wait-what` | A directive: re-pitch the last message with context, in Simplified Technical English. |
 | `okay:less-code` | `/okay:less-code on\|off` | KISS/DRY/YAGNI discipline on every line written or reviewed. Ships **on**. |
@@ -47,7 +48,7 @@ not flood the context window you are learning in.
 
 ## How they fit together
 
-The skills form a chain. Use `okay:explain` to understand one concept. Use `okay:teach-me` to work through a whole resource. Use `okay:quiz-me` to test what you remember. Use `okay:now-i-do-it` to rebuild a change with your own hands. Use `okay:mentor-me` when the goal is bigger than one resource — it keeps a markdown workspace and picks up where the last session stopped.
+The skills form a chain. Use `okay:explain` to understand one concept. Use `okay:teach-me` to work through a whole resource. Use `okay:quiz-me` to test what you remember. Use `okay:now-i-do-it` to rebuild a change with your own hands. Use `okay:audit` to find the problems in code — yours or someone else's — instead of being handed a list. Use `okay:mentor-me` when the goal is bigger than one resource — it keeps a markdown workspace and picks up where the last session stopped.
 
 Use `okay:wait-what` at any point. Run it when a message does not land. It makes the AI re-pitch the message with context, in plain words.
 
