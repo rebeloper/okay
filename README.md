@@ -176,6 +176,8 @@ npm run test:bats
 Both suites run on every push and pull request (`.github/workflows/test.yml`).
 `node --test` is deliberately bare: passing it a directory breaks on Node v26.
 
+To cut a release, see [`docs/RELEASING.md`](docs/RELEASING.md).
+
 ## Output style
 
 The six content skills (`explain`, `teach-me`, `mentor-me`, `quiz-me`, `now-i-do-it`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained.
