@@ -38,6 +38,7 @@ not flood the context window you are learning in.
 |---|---|---|
 | `okay:explain` | `/okay:explain` | Explains one concept at a chosen level: `five`, `junior` (default), `non-dev`, `teammate`. |
 | `okay:teach-me` | `/okay:teach-me` | Turns one resource into a paced, step-by-step learning journey. Same levels. |
+| `okay:mentor-me` | `/okay:mentor-me` | Runs a long-haul learning workspace in plain markdown, across many sessions. |
 | `okay:quiz-me` | `/okay:quiz-me` | Live multiple-choice quiz. Hint and retry on a wrong pick. Never the answer. |
 | `okay:now-i-do-it` | `/okay:now-i-do-it` | Saves your current git diff as an answer-key, reverts it, then paces you to rebuild it by hand. |
 | `okay:wait-what` | `/okay:wait-what` | A directive: re-pitch the last message with context, in Simplified Technical English. |
@@ -46,7 +47,7 @@ not flood the context window you are learning in.
 
 ## How they fit together
 
-The skills form a chain. Use `okay:explain` to understand one concept. Use `okay:teach-me` to work through a whole resource. Use `okay:quiz-me` to test what you remember. Use `okay:now-i-do-it` to rebuild a change with your own hands.
+The skills form a chain. Use `okay:explain` to understand one concept. Use `okay:teach-me` to work through a whole resource. Use `okay:quiz-me` to test what you remember. Use `okay:now-i-do-it` to rebuild a change with your own hands. Use `okay:mentor-me` when the goal is bigger than one resource — it keeps a markdown workspace and picks up where the last session stopped.
 
 Use `okay:wait-what` at any point. Run it when a message does not land. It makes the AI re-pitch the message with context, in plain words.
 
@@ -151,11 +152,12 @@ not want it.
 
 1. `okay` never writes or edits your source code. It explains, teaches, quizzes, and paces. You type every line.
 2. `okay:now-i-do-it` writes exactly three non-source things: its answer-key patch under `.okay/`, its session log under `.okay/`, and a `.okay/` line in `.gitignore` if that line is missing. It runs git commands that reset the working tree. It never authors code.
-3. No hook enforces this. `okay`'s hooks re-arm the two always-on modes and
+3. `okay:mentor-me` writes the workspace it teaches from: `MISSION.md`, `RESOURCES.md`, `GLOSSARY.md`, `NOTES.md`, `lessons/`, and `learning-records/`, in the current directory. All of it is plain markdown notes. It never authors code.
+4. No hook enforces this. `okay`'s hooks re-arm the two always-on modes and
    gate large tool output — none of them lock your source. Subagents, Bash,
    and MCP tools can still bypass the no-write rule. The developer can also
    override it with an explicit instruction. That is their call.
-4. The rule is a promise kept by the skills' own behaviour. `okay` states this plainly. It does not pretend the rule is airtight.
+5. The rule is a promise kept by the skills' own behaviour. `okay` states this plainly. It does not pretend the rule is airtight.
 
 ## Development
 
@@ -176,4 +178,4 @@ Both suites run on every push and pull request (`.github/workflows/test.yml`).
 
 ## Output style
 
-The five content skills (`explain`, `teach-me`, `quiz-me`, `now-i-do-it`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained.
+The six content skills (`explain`, `teach-me`, `mentor-me`, `quiz-me`, `now-i-do-it`, `wait-what`) write ASD-STE100 Simplified Technical English. Sentences stay short. Each sentence carries one idea. The voice is active. The words are plain. Each of those skill folders carries its own `reference-asd-ste100.md` copy, so each stays self-contained.
